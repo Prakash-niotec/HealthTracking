@@ -15,13 +15,13 @@ class AdherenceCalculatorTest {
     fun testAllTakenOnTime() {
         val now = 1000000L
         val logs = listOf(
-            DoseLog("1", "m1", "M", now - hourMs, DoseStatus.TAKEN, actedAt = now - hourMs + 10 * minuteMs), // +10m
-            DoseLog("2", "m2", "M", now - 2 * hourMs, DoseStatus.TAKEN, actedAt = now - 2 * hourMs + 59 * minuteMs) // +59m
+            DoseLog("1", "m1", "M", "", now - hourMs, DoseStatus.TAKEN, actedAt = now - hourMs + 10 * minuteMs), // +10m
+            DoseLog("2", "m2", "M", "", now - 2 * hourMs, DoseStatus.TAKEN, actedAt = now - 2 * hourMs + 59 * minuteMs) // +59m
         )
         
-        assertEquals(100, AdherenceCalculator.calculateAdherencePercentage(logs, now))
+        assertEquals(100, AdherenceCalculator.calculateAdherencePercentage(logs, now, 60))
         
-        val stats = AdherenceCalculator.calculateStats(logs, now)
+        val stats = AdherenceCalculator.calculateStats(logs, now, 60, 120)
         assertEquals(2, stats.onTimeCount)
         assertEquals(0, stats.lateCount)
     }
@@ -30,16 +30,16 @@ class AdherenceCalculatorTest {
     fun testMixed() {
         val now = 1000000L
         val logs = listOf(
-            DoseLog("1", "m1", "M", now - 3 * hourMs, DoseStatus.TAKEN, actedAt = now - 3 * hourMs + 10 * minuteMs), // On time
-            DoseLog("2", "m2", "M", now - 2 * hourMs, DoseStatus.TAKEN, actedAt = now - 2 * hourMs + 61 * minuteMs), // Late (>60m)
-            DoseLog("3", "m3", "M", now - 4 * hourMs, DoseStatus.SKIPPED, actedAt = now - 4 * hourMs), // Skipped
-            DoseLog("4", "m4", "M", now + 1 * hourMs, DoseStatus.PENDING, actedAt = null) // Future (ignored)
+            DoseLog("1", "m1", "M", "", now - 3 * hourMs, DoseStatus.TAKEN, actedAt = now - 3 * hourMs + 10 * minuteMs), // On time
+            DoseLog("2", "m2", "M", "", now - 2 * hourMs, DoseStatus.TAKEN, actedAt = now - 2 * hourMs + 61 * minuteMs), // Late (>60m)
+            DoseLog("3", "m3", "M", "", now - 4 * hourMs, DoseStatus.SKIPPED, actedAt = now - 4 * hourMs), // Skipped
+            DoseLog("4", "m4", "M", "", now + 1 * hourMs, DoseStatus.PENDING, actedAt = null) // Future (ignored)
         )
         
         // 1 on time / 3 due = 33%
-        assertEquals(33, AdherenceCalculator.calculateAdherencePercentage(logs, now))
+        assertEquals(33, AdherenceCalculator.calculateAdherencePercentage(logs, now, 60))
 
-        val stats = AdherenceCalculator.calculateStats(logs, now)
+        val stats = AdherenceCalculator.calculateStats(logs, now, 60, 120)
         assertEquals(1, stats.onTimeCount)
         assertEquals(1, stats.lateCount)
         assertEquals(1, stats.skippedCount)
@@ -50,10 +50,10 @@ class AdherenceCalculatorTest {
     fun testNoneDue() {
         val now = 1000000L
         val logs = listOf(
-            DoseLog("4", "m4", "M", now + 1 * hourMs, DoseStatus.PENDING, actedAt = null) // Future (ignored)
+            DoseLog("4", "m4", "M", "", now + 1 * hourMs, DoseStatus.PENDING, actedAt = null) // Future (ignored)
         )
         
-        assertNull(AdherenceCalculator.calculateAdherencePercentage(logs, now))
+        assertNull(AdherenceCalculator.calculateAdherencePercentage(logs, now, 60))
     }
 
     @Test
@@ -61,10 +61,10 @@ class AdherenceCalculatorTest {
         val now = 1000000L
         val logs = listOf(
             // 2.5 hours ago, still pending -> auto calculated as missed
-            DoseLog("1", "m1", "M", now - (2 * hourMs + 30 * minuteMs), DoseStatus.PENDING, actedAt = null)
+            DoseLog("1", "m1", "M", "", now - (2 * hourMs + 30 * minuteMs), DoseStatus.PENDING, actedAt = null)
         )
         
-        val stats = AdherenceCalculator.calculateStats(logs, now)
+        val stats = AdherenceCalculator.calculateStats(logs, now, 60, 120)
         assertEquals(0, stats.onTimeCount)
         assertEquals(0, stats.lateCount)
         assertEquals(1, stats.missedCount)

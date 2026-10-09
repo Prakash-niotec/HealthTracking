@@ -2,6 +2,9 @@ package com.healthtrack.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthtrack.app.data.model.DailyWaterGoal
+import com.healthtrack.app.data.model.DoseLog
+import com.healthtrack.app.data.model.DoseStatus
 import com.healthtrack.app.data.model.FrequencyType
 import com.healthtrack.app.data.model.Medication
 import com.healthtrack.app.data.model.User
@@ -17,6 +20,7 @@ import com.healthtrack.app.util.Result
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 
 class HealthViewModel(
     private val authRepository: AuthRepository,
@@ -111,6 +115,13 @@ class HealthViewModel(
         }
     }
 
+    fun updateProfile(name: String, weightKg: Float, waterGoalMl: Int, goalIsManual: Boolean) {
+        viewModelScope.launch {
+            authRepository.updateProfile(name, weightKg, waterGoalMl, goalIsManual)
+            waterRepository.setGoalForDate(DailyWaterGoal(currentDateKey, waterGoalMl))
+        }
+    }
+
     fun signOut() {
         viewModelScope.launch {
             authRepository.logout()
@@ -118,16 +129,44 @@ class HealthViewModel(
         }
     }
 
-    fun addHydrationLog(amountMl: Int, label: String) {
+    fun addHydrationLog(amountMl: Int, label: String, timestamp: Long = System.currentTimeMillis()) {
         viewModelScope.launch {
-            waterRepository.addLog(amountMl, currentDateKey)
+            val settings = settingsRepository.notificationSettings.first()
+            val factor = settings.hydrationFactors[label] ?: 1.0f
+            val effectiveMl = (amountMl * factor).toInt()
+            val log = WaterLog(
+                id = UUID.randomUUID().toString(),
+                amountMl = amountMl,
+                timestamp = timestamp,
+                dateKey = currentDateKey,
+                drinkType = label,
+                effectiveMl = effectiveMl
+            )
+            waterRepository.addLog(log)
         }
     }
 
     fun deleteHydrationLog(id: String) {
-        // Core layer only supports undo last.
         viewModelScope.launch {
-            waterRepository.undoLastLog(currentDateKey)
+            waterRepository.deleteLog(id)
+        }
+    }
+    
+    fun editHydrationLog(id: String, newAmountMl: Int, newType: String, newTimestamp: Long) {
+        viewModelScope.launch {
+            val settings = settingsRepository.notificationSettings.first()
+            val factor = settings.hydrationFactors[newType] ?: 1.0f
+            val effectiveMl = (newAmountMl * factor).toInt()
+            
+            val log = WaterLog(
+                id = id,
+                amountMl = newAmountMl,
+                timestamp = newTimestamp,
+                dateKey = currentDateKey,
+                drinkType = newType,
+                effectiveMl = effectiveMl
+            )
+            waterRepository.updateLog(log)
         }
     }
 
@@ -157,7 +196,30 @@ class HealthViewModel(
     }
 
     fun toggleMedicationTaken(id: String) {
-        // We handle dose logs in core. 
+        viewModelScope.launch {
+            val doseLogs = medicationRepository.getDoseLogsForDate(currentDateKey).first()
+            val log = doseLogs.find { it.medId == id }
+            if (log != null) {
+                val newStatus = if (log.status == DoseStatus.TAKEN) {
+                    DoseStatus.PENDING
+                } else {
+                    DoseStatus.TAKEN
+                }
+                medicationRepository.markDose(log.copy(status = newStatus, actedAt = System.currentTimeMillis()))
+            } else {
+                // If not found, maybe generate one dynamically (edge case if scheduler hasn't populated it yet)
+                val med = medicationRepository.getMedications().first().find { it.id == id } ?: return@launch
+                val newLog = DoseLog(
+                    id = "${id}_${System.currentTimeMillis()}",
+                    medId = id,
+                    medName = med.name,
+                    scheduledAt = System.currentTimeMillis(),
+                    status = DoseStatus.TAKEN,
+                    actedAt = System.currentTimeMillis()
+                )
+                medicationRepository.markDose(newLog)
+            }
+        }
     }
 
     fun evaluateIngredient(name: String, amount: Double, unit: String, condition: String) {

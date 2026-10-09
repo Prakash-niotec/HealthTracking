@@ -53,6 +53,20 @@ class MedicationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Action: Snooze
+        val snoozeIntent = Intent(context, MedicationActionReceiver::class.java).apply {
+            action = "ACTION_SNOOZE"
+            putExtra("MED_ID", medId)
+            putExtra("MED_NAME", medName)
+            putExtra("SCHEDULED_AT", scheduledAt)
+        }
+        val snoozePendingIntent = PendingIntent.getBroadcast(
+            context,
+            (medId.hashCode() * 31) + 3,
+            snoozeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID_MEDICATION)
             .setSmallIcon(android.R.drawable.ic_dialog_info) // Placeholder
             .setContentTitle("Time for your medication")
@@ -62,6 +76,7 @@ class MedicationReceiver : BroadcastReceiver() {
             .setContentIntent(pendingIntent)
             .addAction(0, "Taken", takenPendingIntent)
             .addAction(0, "Skip", skippedPendingIntent)
+            .addAction(0, "Snooze", snoozePendingIntent)
             .build()
 
         notificationManager.notify(medId.hashCode(), notification)

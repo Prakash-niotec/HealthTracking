@@ -23,8 +23,11 @@ object WaterCalculator {
         isGoalManual: Boolean
     ): Int {
         if (isGoalManual) {
-            return currentGoalMl
+            return currentGoalMl.coerceIn(MIN_MANUAL_GOAL_ML, MAX_MANUAL_GOAL_ML)
         }
         return calculateAutoGoal(newWeightKg)
     }
+
+    const val MIN_MANUAL_GOAL_ML = 500
+    const val MAX_MANUAL_GOAL_ML = 10000
 }

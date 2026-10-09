@@ -6,6 +6,6 @@ import java.time.LocalDate
 
 interface AlarmScheduler {
     fun scheduleMedicationAlarms(medications: List<Medication>, date: LocalDate)
-    fun scheduleWaterAlarms(settings: NotificationSettings, waterGoal: Int, currentWater: Int)
+    fun scheduleWaterAlarms(settings: NotificationSettings, waterGoal: Int, currentWater: Int, lastDrinkTimestamp: Long)
     fun cancelAllAlarms()
 }

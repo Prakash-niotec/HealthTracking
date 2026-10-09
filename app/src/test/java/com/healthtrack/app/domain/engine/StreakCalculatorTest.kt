@@ -19,7 +19,7 @@ class StreakCalculatorTest {
 
     private fun doseLog(date: String, status: DoseStatus): DoseLog {
         val ts = LocalDate.parse(date).atStartOfDay(timeZone).toInstant().toEpochMilli()
-        return DoseLog("d", "m1", "M", ts, status, ts)
+        return DoseLog("d", "m1", "M", "", ts, status, ts)
     }
 
     @Test
@@ -39,7 +39,7 @@ class StreakCalculatorTest {
             // No med on 02, still satisfied
         )
 
-        assertEquals(4, StreakCalculator.calculateStreak(wLogs, dLogs, waterGoal, today, timeZone))
+        assertEquals(4, StreakCalculator.calculateStreak(wLogs, dLogs, emptyMap(), waterGoal, today, timeZone))
     }
 
     @Test
@@ -53,7 +53,7 @@ class StreakCalculatorTest {
         )
         
         // Only 05 is valid continuously. Streak = 1.
-        assertEquals(1, StreakCalculator.calculateStreak(wLogs, emptyList(), waterGoal, today, timeZone))
+        assertEquals(1, StreakCalculator.calculateStreak(wLogs, emptyList(), emptyMap(), waterGoal, today, timeZone))
     }
 
     @Test
@@ -68,7 +68,7 @@ class StreakCalculatorTest {
         val dLogs = emptyList<DoseLog>()
 
         // 04 and 03 are met. Streak = 2.
-        assertEquals(2, StreakCalculator.calculateStreak(wLogs, dLogs, waterGoal, today, timeZone))
+        assertEquals(2, StreakCalculator.calculateStreak(wLogs, dLogs, emptyMap(), waterGoal, today, timeZone))
     }
 
     @Test
@@ -81,6 +81,6 @@ class StreakCalculatorTest {
         )
         val dLogs = emptyList<DoseLog>()
 
-        assertEquals(2, StreakCalculator.calculateStreak(wLogs, dLogs, waterGoal, today, timeZone))
+        assertEquals(2, StreakCalculator.calculateStreak(wLogs, dLogs, emptyMap(), waterGoal, today, timeZone))
     }
 }

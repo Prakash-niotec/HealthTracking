@@ -84,12 +84,13 @@ class FirestoreMedicationRepository(
                                 val id = doc.id
                                 val medId = doc.getString("medId") ?: return@mapNotNull null
                                 val medName = doc.getString("medName") ?: return@mapNotNull null
+                                val medDosage = doc.getString("medDosage") ?: ""
                                 val scheduledAt = doc.getLong("scheduledAt") ?: return@mapNotNull null
                                 val statusStr = doc.getString("status") ?: return@mapNotNull null
                                 val status = runCatching { DoseStatus.valueOf(statusStr) }.getOrDefault(DoseStatus.PENDING)
                                 val actedAt = doc.getLong("actedAt")
 
-                                DoseLog(id, medId, medName, scheduledAt, status, actedAt)
+                                DoseLog(id, medId, medName, medDosage, scheduledAt, status, actedAt)
                             }
                             saveDoseLogsToCache(doseLogs)
                         }
@@ -190,6 +191,7 @@ class FirestoreMedicationRepository(
             val map = mapOf(
                 "medId" to doseLog.medId,
                 "medName" to doseLog.medName,
+                "medDosage" to doseLog.medDosage,
                 "scheduledAt" to doseLog.scheduledAt,
                 "status" to doseLog.status.name,
                 "actedAt" to doseLog.actedAt

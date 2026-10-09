@@ -11,6 +11,7 @@ data class DoseLog(
     val id: String, // deterministic: medId_dateKey_HHmm
     val medId: String,
     val medName: String,
+    val medDosage: String = "",
     val scheduledAt: Long,
     val status: DoseStatus,
     val actedAt: Long?

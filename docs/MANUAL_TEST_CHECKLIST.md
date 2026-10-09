@@ -25,12 +25,14 @@ The following steps **must be verified manually** on a physical Android device.
 - [ ] With the app closed, tap the "Taken" action button directly on the notification.
 - [ ] Verify the notification dismisses.
 - [ ] Open the app and navigate to the Medications tab. Verify the dose was correctly marked as "Taken" in the UI and the Adherence Streak was updated.
+- [ ] (NEW M3) Tap the "Snooze" action button. Verify it re-triggers the notification based on the custom Snooze user setting.
 
 ## 5. Water Reminder Interval Window
 - [ ] Go to Settings and set the Water Reminder interval to 30 minutes, starting at the current hour.
 - [ ] Wait 30 minutes. Verify the "Stay Hydrated" notification fires.
 - [ ] Change the Active Window so that the current time is *outside* the window (e.g., set window end to 1 hour ago).
 - [ ] Wait for the interval. Verify the notification is suppressed (does not fire).
+- [ ] (NEW W8) Verify the water notification contains a functional "Add 250 ml" quick-action button.
 
 ## 6. Device Reboot (BOOT_COMPLETED)
 - [ ] Ensure medications and water intervals are scheduled.

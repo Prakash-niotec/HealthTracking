@@ -59,7 +59,7 @@ class AlarmSchedulerTest {
     @Test
     fun testWaterSuppressionAfterGoal() {
         // Goal is 2000, current is 2500 -> suppressed
-        scheduler.scheduleWaterAlarms(NotificationSettings(), 2000, 2500)
+        scheduler.scheduleWaterAlarms(NotificationSettings(), 2000, 2500, 0L)
         
         // No alarms should be scheduled
         val alarms = shadowAlarmManager.scheduledAlarms
@@ -69,7 +69,7 @@ class AlarmSchedulerTest {
     @Test
     fun testWaterScheduledBeforeGoal() {
         val settings = NotificationSettings(waterEnabled = true, waterIntervalMinutes = 60)
-        scheduler.scheduleWaterAlarms(settings, 2000, 1000)
+        scheduler.scheduleWaterAlarms(settings, 2000, 1000, 0L)
         
         val alarms = shadowAlarmManager.scheduledAlarms
         assertEquals(1, alarms.size)

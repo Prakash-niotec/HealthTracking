@@ -1,11 +1,14 @@
 package com.healthtrack.app.notifications
 
+import android.app.AlarmManager
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.healthtrack.app.HealthTrackApplication
 import com.healthtrack.app.data.model.DoseLog
+import kotlinx.coroutines.flow.first
 import com.healthtrack.app.data.model.DoseStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +28,36 @@ class MedicationActionReceiver : BroadcastReceiver() {
         val medicationRepository = app.container.medicationRepository
 
         CoroutineScope(Dispatchers.IO).launch {
+            if (action == "ACTION_SNOOZE") {
+                val medName = intent.getStringExtra("MED_NAME") ?: return@launch
+                val medDosage = intent.getStringExtra("MED_DOSAGE") ?: ""
+                val settings = app.container.settingsRepository.notificationSettings.first()
+                val snoozeMs = settings.snoozeDurationMinutes * 60 * 1000L
+                val nextTrigger = System.currentTimeMillis() + snoozeMs
+
+                val snoozeIntent = Intent(context, MedicationReceiver::class.java).apply {
+                    putExtra("MED_ID", medId)
+                    putExtra("MED_NAME", medName)
+                    putExtra("MED_DOSAGE", medDosage)
+                    putExtra("SCHEDULED_AT", scheduledAt)
+                }
+
+                val snoozePendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    (medId.hashCode() * 31) + scheduledAt.hashCode(),
+                    snoozeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    nextTrigger,
+                    snoozePendingIntent
+                )
+                return@launch
+            }
+
             val status = when (action) {
                 "ACTION_TAKEN" -> DoseStatus.TAKEN
                 "ACTION_SKIPPED" -> DoseStatus.SKIPPED
@@ -34,12 +67,11 @@ class MedicationActionReceiver : BroadcastReceiver() {
             // To ensure uniqueness:
             val id = "${medId}_${scheduledAt}"
             
-            // For a true implementation, we need the medName, but we don't pass it fully here. 
-            // In a real app we might fetch it or just pass it in intent.
             val doseLog = DoseLog(
                 id = id,
                 medId = medId,
-                medName = "Medication", // placeholder or fetch from repo
+                medName = intent.getStringExtra("MED_NAME") ?: "Medication",
+                medDosage = intent.getStringExtra("MED_DOSAGE") ?: "",
                 scheduledAt = scheduledAt,
                 status = status,
                 actedAt = System.currentTimeMillis()

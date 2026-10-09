@@ -14,4 +14,12 @@ object Validators {
     fun isValidWeight(weightKg: Float): Boolean {
         return weightKg in 20.0f..300.0f
     }
+
+    fun isValidWaterInterval(minutes: Int): Boolean {
+        return minutes in 15..480
+    }
+
+    fun isValidWaterGoal(ml: Int): Boolean {
+        return ml in 500..10000
+    }
 }

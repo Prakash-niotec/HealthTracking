@@ -19,7 +19,8 @@ object StreakCalculator {
     fun calculateStreak(
         waterLogs: List<WaterLog>,
         doseLogs: List<DoseLog>,
-        waterGoalMl: Int,
+        dailyGoals: Map<String, Int>,
+        defaultWaterGoalMl: Int,
         targetDate: LocalDate, // Typically "today"
         timeZone: ZoneId = ZoneId.systemDefault()
     ): Int {
@@ -35,10 +36,9 @@ object StreakCalculator {
         // Check today first. If today is incomplete (broken streak), we still check if yesterday had a streak
         // "A streak ending today or yesterday".
         val isTodaySatisfied = isDaySatisfied(
-            dateKey = currentDate.toString(),
             waterLogs = waterLogsByDate[currentDate.toString()] ?: emptyList(),
             doseLogs = doseLogsByDate[currentDate.toString()] ?: emptyList(),
-            waterGoalMl = waterGoalMl
+            waterGoalMl = dailyGoals[currentDate.toString()] ?: defaultWaterGoalMl
         )
 
         if (isTodaySatisfied) {
@@ -49,10 +49,9 @@ object StreakCalculator {
             // If yesterday wasn't either, streak is 0.
             currentDate = currentDate.minusDays(1)
             val isYesterdaySatisfied = isDaySatisfied(
-                dateKey = currentDate.toString(),
                 waterLogs = waterLogsByDate[currentDate.toString()] ?: emptyList(),
                 doseLogs = doseLogsByDate[currentDate.toString()] ?: emptyList(),
-                waterGoalMl = waterGoalMl
+                waterGoalMl = dailyGoals[currentDate.toString()] ?: defaultWaterGoalMl
             )
             if (!isYesterdaySatisfied) {
                 return 0
@@ -65,10 +64,9 @@ object StreakCalculator {
         // Count backwards continuously
         while (true) {
             val satisfied = isDaySatisfied(
-                dateKey = currentDate.toString(),
                 waterLogs = waterLogsByDate[currentDate.toString()] ?: emptyList(),
                 doseLogs = doseLogsByDate[currentDate.toString()] ?: emptyList(),
-                waterGoalMl = waterGoalMl
+                waterGoalMl = dailyGoals[currentDate.toString()] ?: defaultWaterGoalMl
             )
             if (satisfied) {
                 streak++
@@ -82,13 +80,12 @@ object StreakCalculator {
     }
 
     private fun isDaySatisfied(
-        dateKey: String,
         waterLogs: List<WaterLog>,
         doseLogs: List<DoseLog>,
         waterGoalMl: Int
     ): Boolean {
         // Water goal met?
-        val totalWater = waterLogs.sumOf { it.amountMl }
+        val totalWater = waterLogs.sumOf { it.effectiveMl }
         if (totalWater < waterGoalMl) return false
 
         // Doses satisfied? (All due doses taken). If no doses scheduled, it's satisfied.

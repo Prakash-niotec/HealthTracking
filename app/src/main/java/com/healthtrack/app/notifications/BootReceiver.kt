@@ -23,7 +23,7 @@ class BootReceiver : BroadcastReceiver() {
 
                 // Reschedule Water
                 val settings = app.container.settingsRepository.notificationSettings.first()
-                alarmScheduler.scheduleWaterAlarms(settings, 2000, 0)
+                alarmScheduler.scheduleWaterAlarms(settings, 2000, 0, 0L)
             }
         }
     }

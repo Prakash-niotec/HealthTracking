@@ -8,6 +8,7 @@ import android.os.Build
 import com.healthtrack.app.data.model.Medication
 import com.healthtrack.app.data.repository.NotificationSettings
 import com.healthtrack.app.domain.engine.DoseScheduler
+import com.healthtrack.app.domain.engine.WaterReminderCalculator
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -45,7 +46,7 @@ class AlarmSchedulerImpl(
         }
     }
 
-    override fun scheduleWaterAlarms(settings: NotificationSettings, waterGoal: Int, currentWater: Int) {
+    override fun scheduleWaterAlarms(settings: NotificationSettings, waterGoal: Int, currentWater: Int, lastDrinkTimestamp: Long) {
         // Cancel existing water alarms
         cancelWaterAlarms()
 
@@ -53,9 +54,14 @@ class AlarmSchedulerImpl(
             return
         }
 
-        // Schedule periodic reminder within active window
         val now = System.currentTimeMillis()
-        val intervalMs = settings.waterIntervalMinutes * 60 * 1000L
+        val triggerAtMs = WaterReminderCalculator.calculateNextReminder(
+            lastDrinkTimestamp = lastDrinkTimestamp,
+            intervalMinutes = settings.waterIntervalMinutes,
+            windowStartHour = settings.waterWindowStartHour,
+            windowEndHour = settings.waterWindowEndHour,
+            nowTimestamp = now
+        )
 
         val intent = Intent(context, WaterReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
@@ -65,10 +71,6 @@ class AlarmSchedulerImpl(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Find next trigger time within window
-        // For simplicity in this implementation, we just set an alarm `intervalMs` from now.
-        // In a true implementation, we'd ensure it falls strictly within start/end hours.
-        val triggerAtMs = now + intervalMs
         scheduleExact(triggerAtMs, pendingIntent)
     }
 

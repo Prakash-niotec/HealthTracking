@@ -4,8 +4,6 @@ import com.healthtrack.app.data.model.DoseLog
 import com.healthtrack.app.data.model.DoseStatus
 
 object AdherenceCalculator {
-    const val ON_TIME_WINDOW_MINUTES = 60L
-    const val MISSED_THRESHOLD_MINUTES = 120L // PENDING becomes MISSED automatically after 2 hrs
 
     /**
      * Calculates adherence % = TAKEN-on-time doses / total due doses
@@ -15,7 +13,8 @@ object AdherenceCalculator {
      */
     fun calculateAdherencePercentage(
         logs: List<DoseLog>,
-        currentTimeMillis: Long
+        currentTimeMillis: Long,
+        onTimeWindowMinutes: Int
     ): Int? {
         val dueDoses = logs.filter { it.scheduledAt <= currentTimeMillis }
 
@@ -26,7 +25,7 @@ object AdherenceCalculator {
         val onTimeTakenCount = dueDoses.count { log ->
             log.status == DoseStatus.TAKEN &&
             log.actedAt != null &&
-            (log.actedAt - log.scheduledAt) <= (ON_TIME_WINDOW_MINUTES * 60 * 1000)
+            (log.actedAt - log.scheduledAt) <= (onTimeWindowMinutes * 60 * 1000L)
         }
 
         return ((onTimeTakenCount.toFloat() / dueDoses.size.toFloat()) * 100f).toInt()
@@ -35,7 +34,12 @@ object AdherenceCalculator {
     /**
      * Counts: on-time, late, skipped, missed
      */
-    fun calculateStats(logs: List<DoseLog>, currentTimeMillis: Long): AdherenceStats {
+    fun calculateStats(
+        logs: List<DoseLog>, 
+        currentTimeMillis: Long,
+        onTimeWindowMinutes: Int,
+        missedThresholdMinutes: Int
+    ): AdherenceStats {
         val dueDoses = logs.filter { it.scheduledAt <= currentTimeMillis }
         
         var onTime = 0
@@ -46,7 +50,7 @@ object AdherenceCalculator {
         for (log in dueDoses) {
             when (log.status) {
                 DoseStatus.TAKEN -> {
-                    if (log.actedAt != null && (log.actedAt - log.scheduledAt) <= (ON_TIME_WINDOW_MINUTES * 60 * 1000)) {
+                    if (log.actedAt != null && (log.actedAt - log.scheduledAt) <= (onTimeWindowMinutes * 60 * 1000L)) {
                         onTime++
                     } else {
                         late++
@@ -56,10 +60,10 @@ object AdherenceCalculator {
                 DoseStatus.MISSED -> missed++
                 DoseStatus.PENDING -> {
                     // It's due, but still pending. Check if it should have auto-transitioned to missed
-                    if (currentTimeMillis - log.scheduledAt >= (MISSED_THRESHOLD_MINUTES * 60 * 1000)) {
+                    if (currentTimeMillis - log.scheduledAt >= (missedThresholdMinutes * 60 * 1000L)) {
                         missed++
                     } else {
-                        // Technically late, hasn't crossed the 2hr missed threshold yet, but user hasn't acted.
+                        // Technically late, hasn't crossed the missed threshold yet, but user hasn't acted.
                         // Wait for user action or threshold cross. Treat as late in progress for stats.
                         late++
                     }
