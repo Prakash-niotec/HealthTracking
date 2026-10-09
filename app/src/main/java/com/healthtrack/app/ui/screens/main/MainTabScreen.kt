@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.healthtrack.app.ui.model.HydrationLog
 import com.healthtrack.app.ui.model.MedicationItem
@@ -45,7 +46,8 @@ fun MainTabScreen(
     onToggleMedicationTaken: (String) -> Unit,
     onDeleteMedication: (String) -> Unit,
     onEvaluateIngredient: (String, Double, String, String) -> Unit,
-    onSignOutClicked: () -> Unit
+    onSignOutClicked: () -> Unit,
+    onOpenReminderSettings: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -79,13 +81,17 @@ fun MainTabScreen(
                         MainTab.PROFILE -> Icons.Rounded.Person
                     }
 
+                    val displayTitle = if (tab == MainTab.MEDS) "Meds" else tab.title
+
                     NavigationBarItem(
                         selected = isSelected,
                         onClick = { onTabSelected(tab) },
-                        icon = { Icon(imageVector = icon, contentDescription = tab.title) },
+                        icon = { Icon(imageVector = icon, contentDescription = displayTitle) },
                         label = {
                             Text(
-                                text = tab.title,
+                                text = displayTitle,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -121,7 +127,8 @@ fun MainTabScreen(
                     hydrationLogs = hydrationLogs,
                     onAddHydration = onAddHydration,
                     onRestoreHydration = onRestoreHydration,
-                    onDeleteHydration = onDeleteHydration
+                    onDeleteHydration = onDeleteHydration,
+                    onOpenSettings = onOpenReminderSettings
                 )
 
                 MainTab.MEDS -> MedsScreen(
@@ -139,7 +146,8 @@ fun MainTabScreen(
 
                 MainTab.PROFILE -> ProfileScreen(
                     userProfile = userProfile,
-                    onSignOutClicked = onSignOutClicked
+                    onSignOutClicked = onSignOutClicked,
+                    onOpenSettings = onOpenReminderSettings
                 )
             }
         }

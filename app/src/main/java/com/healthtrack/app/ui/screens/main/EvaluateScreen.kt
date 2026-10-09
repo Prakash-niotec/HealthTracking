@@ -1,6 +1,8 @@
 package com.healthtrack.app.ui.screens.main
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,12 +18,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.HealthAndSafety
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -33,15 +42,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.healthtrack.app.domain.engine.IngredientCatalogue
 import com.healthtrack.app.ui.model.UserProfile
 import com.healthtrack.app.ui.theme.HealthNexaButton
 import com.healthtrack.app.ui.theme.HealthNexaCard
 import com.healthtrack.app.ui.theme.HealthNexaChip
 import com.healthtrack.app.ui.theme.HealthNexaTextField
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EvaluateScreen(
     userProfile: UserProfile?,
@@ -54,8 +65,24 @@ fun EvaluateScreen(
         mutableStateOf(userProfile?.healthConditions?.firstOrNull() ?: "Hypertension")
     }
 
-    val popularIngredients = listOf("Sodium", "Sugar", "Caffeine", "Potassium", "Saturated Fat")
-    val availableConditions = listOf("Hypertension", "Type 2 Diabetes", "Kidney Disease", "High Cholesterol")
+    var isAutocompleteExpanded by remember { mutableStateOf(false) }
+    var isUnitDropdownExpanded by remember { mutableStateOf(false) }
+
+    val popularIngredients = listOf("Sodium", "Sugar", "Potassium", "Saturated Fat")
+    val availableConditions = listOf("Hypertension", "Type 2 Diabetes", "Kidney Disease", "High Cholesterol", "Heart Disease", "Obesity")
+    val availableUnits = listOf("mg", "g", "mcg", "kcal")
+
+    val matchingCatalogueItems = remember(ingredientName) {
+        IngredientCatalogue.search(ingredientName)
+    }
+
+    // Food Detection Warning (L3)
+    val foodCheckResult = remember(ingredientName) {
+        val q = ingredientName.trim().lowercase()
+        if (q in listOf("banana", "apples", "apple", "rice", "bread", "pizza", "burger", "milk", "chicken", "beef")) {
+            "This looks like a food ($ingredientName). Please enter a nutrient such as sodium, sugar, potassium, or fat per serving."
+        } else null
+    }
 
     Column(
         modifier = Modifier
@@ -65,7 +92,7 @@ fun EvaluateScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Banner Card
+        // Header Card - wrapContentHeight to prevent text clipping (U2)
         HealthNexaCard(
             modifier = Modifier.fillMaxWidth(),
             backgroundColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
@@ -128,8 +155,8 @@ fun EvaluateScreen(
                         } else if (item.equals("Sodium", ignoreCase = true)) {
                             amountStr = "1800"
                             unit = "mg"
-                        } else if (item.equals("Caffeine", ignoreCase = true)) {
-                            amountStr = "150"
+                        } else if (item.equals("Potassium", ignoreCase = true)) {
+                            amountStr = "300"
                             unit = "mg"
                         }
                     }
@@ -139,12 +166,62 @@ fun EvaluateScreen(
 
         // Evaluation Form Inputs
         HealthNexaCard(modifier = Modifier.fillMaxWidth()) {
-            HealthNexaTextField(
-                value = ingredientName,
-                onValueChange = { ingredientName = it },
-                label = "Ingredient Name",
-                leadingIcon = Icons.Rounded.Search
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                HealthNexaTextField(
+                    value = ingredientName,
+                    onValueChange = {
+                        ingredientName = it
+                        isAutocompleteExpanded = it.isNotBlank()
+                    },
+                    label = "Ingredient Name",
+                    leadingIcon = Icons.Rounded.Search
+                )
+
+                // Autocomplete Dropdown Menu (L3)
+                DropdownMenu(
+                    expanded = isAutocompleteExpanded && matchingCatalogueItems.isNotEmpty(),
+                    onDismissRequest = { isAutocompleteExpanded = false },
+                    modifier = Modifier.fillMaxWidth(0.9f)
+                ) {
+                    matchingCatalogueItems.take(5).forEach { item ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(item.displayName, fontWeight = FontWeight.Bold)
+                                    Text("aka: ${item.aliases.take(3).joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+                                }
+                            },
+                            onClick = {
+                                ingredientName = item.displayName
+                                unit = item.supportedUnits.firstOrNull() ?: "mg"
+                                isAutocompleteExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Food Detection Warning Message
+            if (foodCheckResult != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = foodCheckResult,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -159,12 +236,38 @@ fun EvaluateScreen(
                     modifier = Modifier.weight(1f)
                 )
 
-                HealthNexaTextField(
-                    value = unit,
-                    onValueChange = { unit = it },
-                    label = "Unit (mg/g)",
-                    modifier = Modifier.weight(0.8f)
-                )
+                // Unit Dropdown Selector (L3 & U10)
+                Box(modifier = Modifier.weight(0.8f)) {
+                    HealthNexaTextField(
+                        value = unit,
+                        onValueChange = {},
+                        label = "Unit",
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.ArrowDropDown,
+                                contentDescription = "Select unit",
+                                modifier = Modifier.clickable { isUnitDropdownExpanded = true }
+                            )
+                        },
+                        modifier = Modifier.clickable { isUnitDropdownExpanded = true }
+                    )
+
+                    DropdownMenu(
+                        expanded = isUnitDropdownExpanded,
+                        onDismissRequest = { isUnitDropdownExpanded = false }
+                    ) {
+                        availableUnits.forEach { u ->
+                            DropdownMenuItem(
+                                text = { Text(u) },
+                                onClick = {
+                                    unit = u
+                                    isUnitDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

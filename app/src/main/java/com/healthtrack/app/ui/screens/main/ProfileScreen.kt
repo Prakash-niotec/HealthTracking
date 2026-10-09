@@ -18,36 +18,55 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Email
-import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MonitorWeight
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.healthtrack.app.ui.model.RiskLevel
 import com.healthtrack.app.ui.model.UserProfile
 import com.healthtrack.app.ui.theme.HealthNexaCard
 import com.healthtrack.app.ui.theme.HealthNexaChip
 import com.healthtrack.app.ui.theme.HealthNexaOutlinedButton
-import com.healthtrack.app.ui.theme.RiskTierBadge
+import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     userProfile: UserProfile?,
-    onSignOutClicked: () -> Unit
+    onSignOutClicked: () -> Unit,
+    onOpenSettings: () -> Unit = {}
 ) {
+    var showSignOutDialog by remember { mutableStateOf(false) }
+
+    val formattedName = remember(userProfile?.name) {
+        val raw = userProfile?.name ?: "HealthNexa User"
+        raw.split(" ").joinToString(" ") { word ->
+            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+        }
+    }
+
+    val availableConditions = listOf("Hypertension", "Type 2 Diabetes", "Kidney Disease", "High Cholesterol", "Heart Disease", "Obesity")
+    var userConditions by remember(userProfile?.healthConditions) {
+        mutableStateOf(userProfile?.healthConditions?.toSet() ?: setOf("Hypertension"))
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -57,25 +76,30 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // User Avatar Header
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(80.dp),
-            shadowElevation = 4.dp
+        // User Avatar Header - Padding added to prevent flat top clipping (U5)
+        Box(
+            modifier = Modifier.padding(top = 8.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Rounded.Person,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
-                )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(80.dp),
+                shadowElevation = 4.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Person,
+                        contentDescription = "User Avatar",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
             }
         }
 
         Text(
-            text = userProfile?.name ?: "HealthNexa User",
+            text = formattedName,
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -85,8 +109,6 @@ fun ProfileScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
-        RiskTierBadge(riskLevel = RiskLevel.LOW)
 
         Spacer(modifier = Modifier.height(4.dp))
 
@@ -123,7 +145,7 @@ fun ProfileScreen(
             )
         }
 
-        // Active Health Conditions
+        // Active Health Conditions - Selectable Chips (L6)
         HealthNexaCard(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Active Health Conditions:",
@@ -137,23 +159,57 @@ fun ProfileScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                (userProfile?.healthConditions ?: listOf("General Wellness")).forEach { cond ->
+                availableConditions.forEach { cond ->
+                    val isSelected = userConditions.contains(cond)
                     HealthNexaChip(
                         text = cond,
-                        selected = true
+                        selected = isSelected,
+                        onClick = {
+                            userConditions = if (isSelected) {
+                                userConditions - cond
+                            } else {
+                                userConditions + cond
+                            }
+                        }
                     )
                 }
             }
         }
 
-        // HIPAA Data Protection Tag
+        // Reminder Settings Shortcut Card (L6)
+        HealthNexaCard(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onOpenSettings
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Rounded.Notifications,
+                        contentDescription = "Reminder Settings",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Reminder Settings",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        }
+
+        // Honest Medical Disclaimer Card (U7)
         HealthNexaCard(
             modifier = Modifier.fillMaxWidth(),
             backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.Top) {
                 Icon(
-                    imageVector = Icons.Rounded.Shield,
+                    imageVector = Icons.Rounded.Info,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
@@ -161,11 +217,12 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "HIPAA Compliance Protected",
+                        text = "Data Storage & Privacy",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Your sensitive health conditions & metrics are encrypted locally.",
+                        text = "Your data is stored on this device and synced to your account. HEALTHNEXA is a decision-support tool, not medical advice.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -177,7 +234,29 @@ fun ProfileScreen(
 
         HealthNexaOutlinedButton(
             text = "Sign Out",
-            onClick = onSignOutClicked
+            onClick = { showSignOutDialog = true }
+        )
+    }
+
+    // Sign Out Confirmation Dialog (L6)
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = { Text("Sign Out Confirmation") },
+            text = { Text("Are you sure you want to sign out of HealthNexa?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSignOutDialog = false
+                    onSignOutClicked()
+                }) {
+                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
@@ -196,7 +275,7 @@ private fun ProfileItem(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = label,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )

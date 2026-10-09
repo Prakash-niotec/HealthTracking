@@ -1,8 +1,6 @@
 package com.healthtrack.app.ui.screens.main
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +26,6 @@ import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddCircleOutline
 import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MedicalServices
@@ -59,17 +56,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.healthtrack.app.ui.model.MedicationItem
 import com.healthtrack.app.ui.model.DoseTime
-import com.healthtrack.app.ui.model.MedicationHistoryEntry
+import com.healthtrack.app.ui.model.MedicationItem
 import com.healthtrack.app.ui.theme.HealthNexaButton
 import com.healthtrack.app.ui.theme.HealthNexaCard
 import com.healthtrack.app.ui.theme.HealthNexaChip
 import com.healthtrack.app.ui.theme.HealthNexaTextField
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -90,7 +87,7 @@ fun AddMedicationScreen(
             if (medicationToEdit != null && medicationToEdit.doseTimes.isNotEmpty()) {
                 addAll(medicationToEdit.doseTimes)
             } else {
-                add(DoseTime("8:00 AM", "Take with food / breakfast"))
+                add(DoseTime("4:30 PM", "Take with food"))
             }
         }
     }
@@ -117,12 +114,12 @@ fun AddMedicationScreen(
     val unitOptions = listOf("mg", "mcg", "ml", "IU", "pills")
     val frequencyOptions = listOf("Once daily", "Twice daily", "Three times daily")
     val mealTagOptions = listOf(
-        "Take with food / breakfast",
-        "Take with lunch",
-        "Take with dinner",
+        "Take with food",
         "Take before meals",
         "Empty stomach"
     )
+
+    val primaryTiming = doseTimes.firstOrNull()?.time ?: "4:30 PM"
 
     Scaffold(
         topBar = {
@@ -144,7 +141,6 @@ fun AddMedicationScreen(
             )
         },
         bottomBar = {
-            // Sticky Bottom CTA Button
             Surface(
                 tonalElevation = 8.dp,
                 shadowElevation = 8.dp,
@@ -162,16 +158,15 @@ fun AddMedicationScreen(
                                 errorMessage = "Please enter medication name"
                             } else {
                                 val dosageStr = "$strength $unit"
-                                val primaryTiming = doseTimes.firstOrNull()?.time ?: "8:00 AM"
                                 val updatedItem = MedicationItem(
-                                    id = medicationToEdit?.id ?: java.util.UUID.randomUUID().toString(),
+                                    id = medicationToEdit?.id ?: UUID.randomUUID().toString(),
                                     name = name.trim(),
                                     dosage = dosageStr,
                                     timing = primaryTiming,
                                     frequency = frequency,
                                     formFactor = formFactor,
                                     isTaken = medicationToEdit?.isTaken ?: false,
-                                    nextDoseTime = if (medicationToEdit?.isTaken == true) "Completed for today" else "Today, $primaryTiming",
+                                    nextDoseTime = "Today, $primaryTiming",
                                     strength = strength,
                                     unit = unit,
                                     doseTimes = doseTimes.toList(),
@@ -200,9 +195,7 @@ fun AddMedicationScreen(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            // ==========================================
-            // SECTION 1: MEDICATION BASICS
-            // ==========================================
+            // SECTION 1: BASICS
             HealthNexaCard(modifier = Modifier.fillMaxWidth()) {
                 SectionHeader(
                     title = "1. Medication Basics",
@@ -211,7 +204,6 @@ fun AddMedicationScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Name input
                 HealthNexaTextField(
                     value = name,
                     onValueChange = {
@@ -224,7 +216,6 @@ fun AddMedicationScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Suggestions Chips
                 Text(
                     text = "Suggestions:",
                     style = MaterialTheme.typography.labelMedium,
@@ -250,7 +241,6 @@ fun AddMedicationScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Form Factor Chips
                 Text(
                     text = "Form Factor:",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
@@ -272,7 +262,6 @@ fun AddMedicationScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Strength & Unit
                 Text(
                     text = "Strength & Unit:",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
@@ -315,9 +304,7 @@ fun AddMedicationScreen(
                 }
             }
 
-            // ==========================================
             // SECTION 2: FREQUENCY & TIMING
-            // ==========================================
             HealthNexaCard(modifier = Modifier.fillMaxWidth()) {
                 SectionHeader(
                     title = "2. Frequency & Timing",
@@ -409,7 +396,7 @@ fun AddMedicationScreen(
                                 onValueChange = { newTime ->
                                     doseTimes[index] = doseTime.copy(time = newTime)
                                 },
-                                label = "Time (e.g. 8:00 AM)",
+                                label = "Time (e.g. 4:30 PM)",
                                 leadingIcon = Icons.Rounded.AccessTime
                             )
 
@@ -441,10 +428,7 @@ fun AddMedicationScreen(
 
                 OutlinedButton(
                     onClick = {
-                        val nextHour = (8 + doseTimes.size * 4) % 24
-                        val period = if (nextHour >= 12) "PM" else "AM"
-                        val formattedHour = if (nextHour % 12 == 0) 12 else nextHour % 12
-                        doseTimes.add(DoseTime("$formattedHour:00 $period", "Take with food"))
+                        doseTimes.add(DoseTime("8:00 PM", "Take with dinner"))
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -452,21 +436,51 @@ fun AddMedicationScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("+ Add Another Dose Time")
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Live Schedule Preview Card (L1)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Live Schedule Preview",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "First dose: Today $primaryTiming, then Tomorrow $primaryTiming",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
             }
 
-            // ==========================================
-            // SECTION 3: SCHEDULE & DURATION
-            // ==========================================
+            // SECTION 3: DURATION & DAYS
             HealthNexaCard(modifier = Modifier.fillMaxWidth()) {
                 SectionHeader(
-                    title = "3. Schedule & Duration",
+                    title = "3. Treatment Days & Stock",
                     icon = Icons.Rounded.CalendarToday
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Active Treatment Days:",
+                    text = "Active Days:",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                 )
 
@@ -505,7 +519,6 @@ fun AddMedicationScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Refill Reminder Toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -518,17 +531,10 @@ fun AddMedicationScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Refill Reminder",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                            Text(
-                                text = "Get notified when stock is low",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = "Refill Reminder",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                        )
                     }
 
                     Switch(
@@ -539,14 +545,13 @@ fun AddMedicationScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Stock Count Counter
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Current Stock Count:",
+                        text = "Stock Count:",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                     )
 
@@ -565,8 +570,7 @@ fun AddMedicationScreen(
 
                         Text(
                             text = "$stockCount pills",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
 
                         IconButton(
@@ -579,64 +583,6 @@ fun AddMedicationScreen(
                         }
                     }
                 }
-            }
-
-            // ==========================================
-            // SECTION 4: CLINICAL SAFETY & NOTES
-            // ==========================================
-            HealthNexaCard(modifier = Modifier.fillMaxWidth()) {
-                SectionHeader(
-                    title = "4. Clinical Safety & Notes",
-                    icon = Icons.Rounded.MedicalServices
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Interaction Guidance Banner
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Interaction Guidance",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Ensure doses are taken with adequate water. If taking with antihypertensives or diabetes medications, monitor blood pressure and blood glucose levels regularly.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                HealthNexaTextField(
-                    value = specialInstructions,
-                    onValueChange = { specialInstructions = it },
-                    label = "Special Instructions / Notes",
-                    singleLine = false,
-                    modifier = Modifier.height(100.dp)
-                )
             }
 
             if (errorMessage != null) {
@@ -673,7 +619,7 @@ fun AddMedicationScreen(
 @Composable
 private fun SectionHeader(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: ImageVector
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

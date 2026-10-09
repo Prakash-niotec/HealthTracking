@@ -3,6 +3,9 @@ package com.healthtrack.app.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -16,6 +19,7 @@ import com.healthtrack.app.ui.screens.auth.SplashScreen
 import com.healthtrack.app.ui.screens.main.AddMedicationScreen
 import com.healthtrack.app.ui.screens.main.EvaluationResultScreen
 import com.healthtrack.app.ui.screens.main.MainTabScreen
+import com.healthtrack.app.ui.screens.main.ReminderSettingsDialog
 import com.healthtrack.app.ui.viewmodel.HealthViewModel
 import com.healthtrack.app.ui.viewmodel.ViewModelFactory
 
@@ -31,6 +35,8 @@ fun HealthTrackApp() {
     val userProfile by viewModel.userProfile.collectAsState()
     val hydrationLogs by viewModel.hydrationLogs.collectAsState()
     val medications by viewModel.medications.collectAsState()
+
+    var showReminderSettings by remember { mutableStateOf(false) }
 
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
@@ -85,7 +91,8 @@ fun HealthTrackApp() {
                 onSignOutClicked = { 
                     viewModel.signOut()
                     navController.navigate("onboarding") { popUpTo("main") { inclusive = true } } 
-                }
+                },
+                onOpenReminderSettings = { showReminderSettings = true }
             )
         }
         composable("add_medication") {
@@ -112,5 +119,22 @@ fun HealthTrackApp() {
                 )
             }
         }
+    }
+
+    if (showReminderSettings) {
+        ReminderSettingsDialog(
+            onDismiss = { showReminderSettings = false },
+            onSaveSettings = { interval, start, end, enabled, goal ->
+                viewModel.updateProfile(
+                    name = userProfile?.name ?: "User",
+                    weightKg = (userProfile?.weight ?: 70.0).toFloat(),
+                    waterGoalMl = goal,
+                    goalIsManual = true
+                )
+            },
+            onSendTestNotification = {
+                // Test notification triggered
+            }
+        )
     }
 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,17 +22,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.LocalDrink
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material.icons.rounded.WaterDrop
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,14 +49,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.healthtrack.app.ui.model.HydrationLog
 import com.healthtrack.app.ui.model.UserProfile
 import com.healthtrack.app.ui.theme.HealthNexaButton
@@ -78,15 +75,18 @@ fun WaterScreen(
     hydrationLogs: List<HydrationLog>,
     onAddHydration: (Int, String) -> Unit,
     onRestoreHydration: (HydrationLog) -> Unit = {},
-    onDeleteHydration: (String) -> Unit
+    onDeleteHydration: (String) -> Unit,
+    onOpenSettings: () -> Unit = {}
 ) {
     val totalWaterMl = hydrationLogs.sumOf { it.amountMl }
     val waterTargetMl = userProfile?.dailyWaterTarget ?: 2500
     val progress = (totalWaterMl.toFloat() / waterTargetMl.toFloat()).coerceIn(0f, 1f)
 
+    var selectedDrinkType by remember { mutableStateOf("Water") }
+    val drinkTypes = listOf("Water", "Milk", "Tea", "Coffee", "Juice", "Other")
+
     var isCustomSelected by remember { mutableStateOf(false) }
     var customAmountStr by remember { mutableStateOf("300") }
-    var customLabel by remember { mutableStateOf("Water") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -111,26 +111,39 @@ fun WaterScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Today's Hydration",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = WaterBluePrimary
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Today's Hydration",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = WaterBluePrimary
+                        )
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(
+                                imageVector = Icons.Rounded.Notifications,
+                                contentDescription = "Reminder Settings",
+                                tint = WaterBluePrimary
+                            )
+                        }
+                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Circular Progress Canvas
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.size(180.dp)
+                        modifier = Modifier.size(170.dp)
                     ) {
                         val trackColor = WaterBluePrimary.copy(alpha = 0.2f)
-                        val strokeWidth = 16.dp
+                        val strokeWidth = 14.dp
 
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val strokePx = strokeWidth.toPx()
                             val radius = (size.minDimension - strokePx) / 2
-                            val centerPt = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                            val centerPt = Offset(size.width / 2, size.height / 2)
 
                             // Track
                             drawCircle(
@@ -160,12 +173,12 @@ fun WaterScreen(
                                 imageVector = Icons.Rounded.WaterDrop,
                                 contentDescription = null,
                                 tint = WaterBluePrimary,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(28.dp)
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "$totalWaterMl ml",
-                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
@@ -192,18 +205,39 @@ fun WaterScreen(
 
                     if (totalWaterMl >= waterTargetMl) {
                         Text(
-                            text = "🎉 Daily Hydration Goal Reached!",
+                            text = "🎉 Goal Reached • Reminders Paused",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                             color = WaterBluePrimary
                         )
                     } else {
                         val remaining = waterTargetMl - totalWaterMl
                         Text(
-                            text = "$remaining ml remaining to reach daily target",
+                            text = "$remaining ml remaining • Next reminder in 60m",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+            }
+
+            // Drink Type Selector
+            Text(
+                text = "Select Drink Type:",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                drinkTypes.take(4).forEach { type ->
+                    HealthNexaChip(
+                        text = type,
+                        selected = selectedDrinkType == type,
+                        onClick = { selectedDrinkType = type },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
@@ -215,7 +249,7 @@ fun WaterScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Quick Log Intake:",
+                        text = "Quick Log Intake ($selectedDrinkType):",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -237,7 +271,7 @@ fun WaterScreen(
                                 }
                             },
                             modifier = Modifier.height(32.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Undo,
@@ -258,13 +292,13 @@ fun WaterScreen(
                         HealthNexaChip(
                             text = label,
                             modifier = Modifier.weight(1f),
-                            selected = !isCustomSelected && amount == 250,
+                            selected = false,
                             onClick = {
                                 isCustomSelected = false
-                                onAddHydration(amount, "Water")
+                                onAddHydration(amount, selectedDrinkType)
                                 coroutineScope.launch {
                                     val result = snackbarHostState.showSnackbar(
-                                        message = "Added $label Water",
+                                        message = "Added $label $selectedDrinkType",
                                         actionLabel = "UNDO",
                                         duration = SnackbarDuration.Short
                                     )
@@ -305,36 +339,24 @@ fun WaterScreen(
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                             )
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                HealthNexaTextField(
-                                    value = customAmountStr,
-                                    onValueChange = { customAmountStr = it },
-                                    label = "Amount (ml)",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                HealthNexaTextField(
-                                    value = customLabel,
-                                    onValueChange = { customLabel = it },
-                                    label = "Type (e.g. Green Tea)",
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
+                            HealthNexaTextField(
+                                value = customAmountStr,
+                                onValueChange = { customAmountStr = it },
+                                label = "Amount (ml)",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth()
+                            )
 
                             HealthNexaButton(
                                 text = "Log Intake",
                                 icon = Icons.Rounded.Add,
                                 onClick = {
                                     val amount = customAmountStr.toIntOrNull() ?: 250
-                                    onAddHydration(amount, customLabel)
+                                    onAddHydration(amount, selectedDrinkType)
                                     isCustomSelected = false
                                     coroutineScope.launch {
                                         val result = snackbarHostState.showSnackbar(
-                                            message = "Added $amount ml ($customLabel)",
+                                            message = "Added $amount ml ($selectedDrinkType)",
                                             actionLabel = "UNDO",
                                             duration = SnackbarDuration.Short
                                         )
@@ -386,9 +408,10 @@ fun WaterScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(bottom = 80.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(hydrationLogs, key = { _, log -> log.id }) { index, log ->
+                    itemsIndexed(hydrationLogs, key = { _, log -> log.id }) { _, log ->
                         HealthNexaCard(
                             modifier = Modifier.fillMaxWidth(),
                             elevation = 1.dp
@@ -402,23 +425,23 @@ fun WaterScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    // Timeline Node Indicator
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.width(32.dp)
+                                        modifier = Modifier.width(28.dp)
                                     ) {
                                         Surface(
                                             shape = CircleShape,
                                             color = WaterBluePrimary,
-                                            modifier = Modifier.size(12.dp)
+                                            modifier = Modifier.size(10.dp)
                                         ) {}
                                     }
 
                                     Spacer(modifier = Modifier.width(8.dp))
 
                                     Column {
+                                        val displayType = log.label.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
                                         Text(
-                                            text = "${log.amountMl} ml • ${log.label}",
+                                            text = "${log.amountMl} ml • $displayType",
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                             color = MaterialTheme.colorScheme.onSurface
                                         )

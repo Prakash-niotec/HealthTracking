@@ -1,10 +1,7 @@
 package com.healthtrack.app.ui.screens.main
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +9,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,17 +24,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Medication
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -60,12 +57,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.healthtrack.app.ui.model.MedicationItem
-import com.healthtrack.app.ui.model.DoseTime
-import com.healthtrack.app.ui.model.MedicationHistoryEntry
 import com.healthtrack.app.ui.theme.HealthNexaButton
 import com.healthtrack.app.ui.theme.HealthNexaCard
+import com.healthtrack.app.ui.theme.HealthNexaOutlinedButton
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,6 +79,7 @@ fun MedsScreen(
     val adherencePercent = if (totalCount > 0) (takenCount * 100) / totalCount else 0
 
     var selectedHistoryMed by remember { mutableStateOf<MedicationItem?>(null) }
+    var medToDelete by remember { mutableStateOf<MedicationItem?>(null) }
 
     val upcomingMeds = medications.filter { !it.isTaken }
     val loggedMeds = medications.filter { it.isTaken }
@@ -162,7 +158,7 @@ fun MedsScreen(
                         trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                     )
 
-                    // Medication Adherence Badges / Dots (Met, Lis, Vit D, Omg-3)
+                    // Medication Adherence Badges - Full Names (U9)
                     Text(
                         text = "Medication Status Today:",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
@@ -175,14 +171,6 @@ fun MedsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         medications.forEach { med ->
-                            val shortName = when {
-                                med.name.contains("Metformin", ignoreCase = true) -> "Met"
-                                med.name.contains("Lisinopril", ignoreCase = true) -> "Lis"
-                                med.name.contains("Vitamin D", ignoreCase = true) -> "Vit D"
-                                med.name.contains("Omega", ignoreCase = true) -> "Omg-3"
-                                else -> med.name.take(5)
-                            }
-
                             Surface(
                                 shape = CircleShape,
                                 color = if (med.isTaken) {
@@ -190,14 +178,14 @@ fun MedsScreen(
                                 } else {
                                     MaterialTheme.colorScheme.surfaceVariant
                                 },
-                                border = androidx.compose.foundation.BorderStroke(
+                                border = BorderStroke(
                                     width = 1.5.dp,
                                     color = if (med.isTaken) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                                 )
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (med.isTaken) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
@@ -207,7 +195,7 @@ fun MedsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = shortName,
+                                        text = med.name,
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = if (med.isTaken) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -239,7 +227,7 @@ fun MedsScreen(
                             onToggleTaken = { onToggleTaken(med.id) },
                             onEdit = { onNavigateToEditMedication(med.id) },
                             onHistory = { selectedHistoryMed = med },
-                            onDelete = { onDeleteMedication(med.id) }
+                            onDelete = { medToDelete = med }
                         )
                     }
                 }
@@ -260,7 +248,7 @@ fun MedsScreen(
                             onToggleTaken = { onToggleTaken(med.id) },
                             onEdit = { onNavigateToEditMedication(med.id) },
                             onHistory = { selectedHistoryMed = med },
-                            onDelete = { onDeleteMedication(med.id) }
+                            onDelete = { medToDelete = med }
                         )
                     }
                 }
@@ -298,6 +286,29 @@ fun MedsScreen(
         }
     }
 
+    // Delete Confirmation Dialog
+    if (medToDelete != null) {
+        val med = medToDelete!!
+        AlertDialog(
+            onDismissRequest = { medToDelete = null },
+            title = { Text("Delete Medication") },
+            text = { Text("Are you sure you want to delete '${med.name}'?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteMedication(med.id)
+                    medToDelete = null
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { medToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // Medication History Dialog
     if (selectedHistoryMed != null) {
         val med = selectedHistoryMed!!
@@ -328,11 +339,6 @@ fun MedsScreen(
                         text = "Dosage: ${med.dosage} (${med.frequency})",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Remaining Stock: ${med.stockCount} pills",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
                     )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -428,14 +434,14 @@ private fun MedicationCardItem(
                     Surface(
                         shape = CircleShape,
                         color = if (medication.isTaken) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.Medication,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     }
@@ -449,77 +455,17 @@ private fun MedicationCardItem(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${medication.dosage} • ${medication.timing} • ${medication.frequency}",
-                            style = MaterialTheme.typography.bodySmall,
+                            text = "${medication.dosage} • ${medication.timing}",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (medication.specialInstructions.isNotEmpty()) {
-                            Text(
-                                text = "Note: ${medication.specialInstructions}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.secondary,
-                                maxLines = 1
-                            )
-                        }
                     }
                 }
 
-                // Delete Icon
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = "Delete medication",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                modifier = Modifier.padding(vertical = 2.dp)
-            )
-
-            // Card Action Bar: Mark Taken / Undo, Edit, History
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Mark Taken / Undo Action Button
-                if (medication.isTaken) {
-                    OutlinedButton(
-                        onClick = onToggleTaken,
-                        modifier = Modifier.height(34.dp),
-                        shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Undo,
-                            contentDescription = "Undo taken status",
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Undo",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                } else {
-                    HealthNexaButton(
-                        text = "Mark Taken",
-                        icon = Icons.Rounded.Check,
-                        onClick = onToggleTaken,
-                        modifier = Modifier.height(34.dp)
-                    )
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Edit Action
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
                     IconButton(
                         onClick = onEdit,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Edit,
@@ -529,10 +475,9 @@ private fun MedicationCardItem(
                         )
                     }
 
-                    // History Action
                     IconButton(
                         onClick = onHistory,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.History,
@@ -541,6 +486,46 @@ private fun MedicationCardItem(
                             modifier = Modifier.size(20.dp)
                         )
                     }
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = "Delete medication",
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+
+            // Accessible Action Buttons with >= 48dp Touch Targets (U3)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (medication.isTaken) {
+                    HealthNexaOutlinedButton(
+                        text = "Undo Taken",
+                        icon = Icons.Rounded.Undo,
+                        onClick = onToggleTaken,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    HealthNexaButton(
+                        text = "Mark Taken",
+                        icon = Icons.Rounded.Check,
+                        onClick = onToggleTaken,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }

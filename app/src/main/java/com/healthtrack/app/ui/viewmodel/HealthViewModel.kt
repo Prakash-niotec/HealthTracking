@@ -55,9 +55,21 @@ class HealthViewModel(
         .map { logs -> logs.map { HydrationLog(id = it.id, amountMl = it.amountMl, label = it.drinkType, timestamp = it.timestamp) } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // Convert core Medications into UI MedicationItems
+    // Convert core Medications into UI MedicationItems preserving EXACT times (L1)
     val medications: StateFlow<List<MedicationItem>> = medicationRepository.getMedications()
-        .map { list -> list.map { MedicationItem(id = it.id, name = it.name, dosage = it.dosage) } }
+        .map { list ->
+            list.map { med ->
+                val primaryTime = med.times.firstOrNull() ?: "4:30 PM"
+                MedicationItem(
+                    id = med.id,
+                    name = med.name,
+                    dosage = med.dosage,
+                    timing = primaryTime,
+                    frequency = "Daily",
+                    doseTimes = med.times.map { DoseTime(it) }
+                )
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun navigateTo(screen: Screen, clearStack: Boolean = false) {
@@ -105,7 +117,7 @@ class HealthViewModel(
     fun signUp(name: String, email: String, pass: String, weight: Double, conditions: List<String>, hipaaConsent: Boolean, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             if (!hipaaConsent) {
-                onError("HIPAA consent required")
+                onError("Consent required")
                 return@launch
             }
             val res = authRepository.register(name, email, pass, weight.toFloat())
@@ -175,13 +187,14 @@ class HealthViewModel(
 
     fun addMedication(item: MedicationItem) {
         viewModelScope.launch {
+            val extractedTimes = item.doseTimes.map { it.time }.ifEmpty { listOf(item.timing) }
             val med = Medication(
                 id = item.id,
                 name = item.name,
                 dosage = item.dosage,
                 frequencyType = FrequencyType.DAILY,
-                times = listOf("08:00"),
-                days = emptySet(),
+                times = extractedTimes,
+                days = setOf(1, 2, 3, 4, 5, 6, 7),
                 startDate = System.currentTimeMillis(),
                 endDate = null,
                 isActive = true
