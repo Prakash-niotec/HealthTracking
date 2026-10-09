@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -32,10 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.healthtrack.app.ui.theme.HealthNexaButton
+import com.healthtrack.app.notifications.NotificationHelper
 import com.healthtrack.app.ui.theme.HealthNexaChip
 import com.healthtrack.app.ui.theme.HealthNexaTextField
 
@@ -43,9 +43,10 @@ import com.healthtrack.app.ui.theme.HealthNexaTextField
 @Composable
 fun ReminderSettingsDialog(
     onDismiss: () -> Unit,
-    onSaveSettings: (intervalMin: Int, startHour: Int, endHour: Int, waterEnabled: Boolean, waterGoalMl: Int) -> Unit,
-    onSendTestNotification: () -> Unit
+    onSaveSettings: (intervalMin: Int, startHour: Int, endHour: Int, waterEnabled: Boolean, waterGoalMl: Int) -> Unit
 ) {
+    val context = LocalContext.current
+
     var waterEnabled by remember { mutableStateOf(true) }
     var intervalMin by remember { mutableStateOf("60") }
     var startHour by remember { mutableStateOf("8") }
@@ -156,7 +157,9 @@ fun ReminderSettingsDialog(
                 HorizontalDivider()
 
                 Button(
-                    onClick = onSendTestNotification,
+                    onClick = {
+                        NotificationHelper.sendTestNotification(context)
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Rounded.Notifications, contentDescription = null)

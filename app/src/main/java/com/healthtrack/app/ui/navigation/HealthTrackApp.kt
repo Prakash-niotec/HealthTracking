@@ -19,7 +19,7 @@ import com.healthtrack.app.ui.screens.auth.SplashScreen
 import com.healthtrack.app.ui.screens.main.AddMedicationScreen
 import com.healthtrack.app.ui.screens.main.EvaluationResultScreen
 import com.healthtrack.app.ui.screens.main.MainTabScreen
-import com.healthtrack.app.ui.screens.main.ReminderSettingsDialog
+import com.healthtrack.app.ui.screens.main.NotificationCenterDialog
 import com.healthtrack.app.ui.viewmodel.HealthViewModel
 import com.healthtrack.app.ui.viewmodel.ViewModelFactory
 
@@ -36,12 +36,16 @@ fun HealthTrackApp() {
     val hydrationLogs by viewModel.hydrationLogs.collectAsState()
     val medications by viewModel.medications.collectAsState()
 
-    var showReminderSettings by remember { mutableStateOf(false) }
+    var showNotificationCenter by remember { mutableStateOf(false) }
 
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(onSplashFinished = { 
-                navController.navigate("onboarding") { popUpTo("splash") { inclusive = true } } 
+                if (userProfile != null) {
+                    navController.navigate("main") { popUpTo("splash") { inclusive = true } }
+                } else {
+                    navController.navigate("onboarding") { popUpTo("splash") { inclusive = true } } 
+                }
             })
         }
         composable("onboarding") {
@@ -92,7 +96,7 @@ fun HealthTrackApp() {
                     viewModel.signOut()
                     navController.navigate("onboarding") { popUpTo("main") { inclusive = true } } 
                 },
-                onOpenReminderSettings = { showReminderSettings = true }
+                onOpenReminderSettings = { showNotificationCenter = true }
             )
         }
         composable("add_medication") {
@@ -121,9 +125,9 @@ fun HealthTrackApp() {
         }
     }
 
-    if (showReminderSettings) {
-        ReminderSettingsDialog(
-            onDismiss = { showReminderSettings = false },
+    if (showNotificationCenter) {
+        NotificationCenterDialog(
+            onDismiss = { showNotificationCenter = false },
             onSaveSettings = { interval, start, end, enabled, goal ->
                 viewModel.updateProfile(
                     name = userProfile?.name ?: "User",
@@ -131,9 +135,6 @@ fun HealthTrackApp() {
                     waterGoalMl = goal,
                     goalIsManual = true
                 )
-            },
-            onSendTestNotification = {
-                // Test notification triggered
             }
         )
     }

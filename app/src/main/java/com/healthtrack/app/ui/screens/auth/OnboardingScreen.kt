@@ -16,12 +16,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bloodtype
 import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -35,7 +33,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.healthtrack.app.ui.theme.HealthNexaButton
 import com.healthtrack.app.ui.theme.HealthNexaCard
 import com.healthtrack.app.ui.theme.HealthNexaOutlinedButton
@@ -57,7 +54,10 @@ fun OnboardingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Surface(
@@ -98,7 +98,7 @@ fun OnboardingScreen(
                 // Feature Cards
                 FeatureCard(
                     icon = Icons.Rounded.QrCodeScanner,
-                    title = "AI Ingredient Safety Scanner",
+                    title = "Rule-based Ingredient Safety Scanner",
                     description = "Instantly evaluate food & supplement ingredients against your personal health conditions.",
                     iconBg = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -116,27 +116,31 @@ fun OnboardingScreen(
 
                 FeatureCard(
                     icon = Icons.Rounded.Shield,
-                    title = "HIPAA-Protected Health Insights",
-                    description = "Your health data is safe, private, and personalized to manage risk tiers effectively.",
+                    title = "Private & Personal Health Insights",
+                    description = "Your health data is stored safely on your device and synchronized to your account.",
                     iconBg = MaterialTheme.colorScheme.tertiaryContainer
                 )
             }
 
+            // Bottom CTA Buttons - Centered Alignment
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp, bottom = 12.dp)
+                    .padding(top = 28.dp, bottom = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 HealthNexaButton(
                     text = "Get Started",
-                    onClick = onNavigateToSignUp
+                    onClick = onNavigateToSignUp,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 HealthNexaOutlinedButton(
                     text = "Already have an account? Sign In",
-                    onClick = onNavigateToSignIn
+                    onClick = onNavigateToSignIn,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -152,7 +156,7 @@ private fun FeatureCard(
 ) {
     HealthNexaCard(
         modifier = Modifier.fillMaxWidth(),
-        elevation = 2.dp,
+        elevation = 1.dp,
         shapeRadius = 18.dp
     ) {
         Row(

@@ -1,6 +1,6 @@
 package com.healthtrack.app.notifications
 
-
+import android.R
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -45,7 +45,7 @@ class WaterReceiver : BroadcastReceiver() {
                 val settings = settingsRepo.notificationSettings.first()
                 val currentLogs = waterRepo.getLogsForDate(dateKey).first()
                 val currentTotal = currentLogs.sumOf { it.effectiveMl }
-                val dailyGoal = waterRepo.getGoalForDate(dateKey).first()?.goalMl ?: 2000
+                val dailyGoal = waterRepo.getGoalForDate(dateKey).first()?.goalMl ?: 2500
                 
                 val alarmScheduler = AlarmSchedulerImpl(context)
                 alarmScheduler.scheduleWaterAlarms(settings, dailyGoal, currentTotal, now)
@@ -57,14 +57,10 @@ class WaterReceiver : BroadcastReceiver() {
             val settings = settingsRepo.notificationSettings.first()
             if (!settings.waterEnabled) return@launch
             
-            // Check active window
             val nowHour = LocalTime.now().hour
             if (nowHour < settings.waterWindowStartHour || nowHour >= settings.waterWindowEndHour) {
                 return@launch
             }
-
-            // Optional: Check if goal is already met today. If so, return.
-            // Simplified for receiver: always show if in window.
 
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -89,25 +85,26 @@ class WaterReceiver : BroadcastReceiver() {
             )
 
             val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID_WATER)
-                .setSmallIcon(android.R.drawable.ic_dialog_info) // Placeholder
+                .setSmallIcon(R.drawable.ic_dialog_info)
                 .setContentTitle("Stay Hydrated!")
                 .setContentText("It's time to drink some water.")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .addAction(0, "Add 250 ml", addWaterPendingIntent)
                 .build()
 
             notificationManager.notify(1001, notification)
+            NotificationHelper.recordNotification(context, "Stay Hydrated!", "It's time to drink some water.", "Water Alert")
 
-            // Calculate current total
             val dateKey = LocalDate.now().toString()
-            val dailyGoal = waterRepo.getGoalForDate(dateKey).first()?.goalMl ?: 2000
+            val dailyGoal = waterRepo.getGoalForDate(dateKey).first()?.goalMl ?: 2500
             val currentLogs = waterRepo.getLogsForDate(dateKey).first()
             val currentTotal = currentLogs.sumOf { it.effectiveMl }
             val lastDrink = currentLogs.maxByOrNull { it.timestamp }?.timestamp ?: 0L
 
-            // Reschedule next one automatically
             val alarmScheduler = AlarmSchedulerImpl(context)
             alarmScheduler.scheduleWaterAlarms(settings, dailyGoal, currentTotal, lastDrink)
         }

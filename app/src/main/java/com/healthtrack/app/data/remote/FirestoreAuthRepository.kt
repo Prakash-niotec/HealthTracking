@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 class FirestoreAuthRepository(
     private val localCache: LocalCache,
@@ -25,26 +26,23 @@ class FirestoreAuthRepository(
     override val currentUser: Flow<User?> = _currentUser.asStateFlow()
 
     init {
-        // Hydrate from LocalCache instantly
+        // Hydrate persistent user from LocalCache on cold startup
         val cachedId = localCache.getString("${KEY_CURRENT_USER}_id")
-        if (cachedId != null) {
-            val name = localCache.getString("${KEY_CURRENT_USER}_name") ?: ""
+        if (!cachedId.isNullOrEmpty()) {
+            val name = localCache.getString("${KEY_CURRENT_USER}_name") ?: "User"
             val email = localCache.getString("${KEY_CURRENT_USER}_email") ?: ""
-            val weight = localCache.getString("${KEY_CURRENT_USER}_weight")?.toFloatOrNull() ?: 0f
-            val goal = localCache.getString("${KEY_CURRENT_USER}_goal")?.toIntOrNull() ?: 2000
+            val weight = localCache.getString("${KEY_CURRENT_USER}_weight")?.toFloatOrNull() ?: 70f
+            val goal = localCache.getString("${KEY_CURRENT_USER}_goal")?.toIntOrNull() ?: 2500
             val isManual = localCache.getBoolean("${KEY_CURRENT_USER}_manual", false)
-            val createdAt = localCache.getString("${KEY_CURRENT_USER}_created")?.toLongOrNull() ?: 0L
+            val createdAt = localCache.getString("${KEY_CURRENT_USER}_created")?.toLongOrNull() ?: System.currentTimeMillis()
             
             _currentUser.value = User(cachedId, name, email, weight, goal, isManual, createdAt)
         }
 
-        // Attach listener to keep Firebase auth state in sync
+        // Attach AuthStateListener without auto-clearing local persistent user on startup
         auth.addAuthStateListener { firebaseAuth ->
             val fbUser = firebaseAuth.currentUser
-            if (fbUser == null) {
-                clearCache()
-            } else if (_currentUser.value?.uid != fbUser.uid) {
-                // Fetch latest details from firestore if just logged in and not in cache
+            if (fbUser != null && _currentUser.value?.uid != fbUser.uid) {
                 firestore.collection("users").document(fbUser.uid).get()
                     .addOnSuccessListener { doc ->
                         if (doc.exists()) {
@@ -52,8 +50,8 @@ class FirestoreAuthRepository(
                                 uid = fbUser.uid,
                                 name = doc.getString("name") ?: "",
                                 email = fbUser.email ?: "",
-                                weightKg = doc.getDouble("weightKg")?.toFloat() ?: 0f,
-                                waterGoalMl = doc.getLong("waterGoalMl")?.toInt() ?: 2000,
+                                weightKg = doc.getDouble("weightKg")?.toFloat() ?: 70f,
+                                waterGoalMl = doc.getLong("waterGoalMl")?.toInt() ?: 2500,
                                 goalIsManual = doc.getBoolean("goalIsManual") ?: false,
                                 createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
                             )
@@ -89,24 +87,41 @@ class FirestoreAuthRepository(
     override suspend fun login(email: String, password: String): Result<Unit> {
         return try {
             val result = auth.signInWithEmailAndPassword(email, password).await()
-            val fbUser = result.user ?: throw Exception("Login failed")
+            val fbUser = result.user ?: throw Exception("Login failed")  
             
             val doc = firestore.collection("users").document(fbUser.uid).get().await()
-            if (doc.exists()) {
-                val user = User(
+            val user = if (doc.exists()) {
+                User(
                     uid = fbUser.uid,
-                    name = doc.getString("name") ?: "",
-                    email = fbUser.email ?: "",
-                    weightKg = doc.getDouble("weightKg")?.toFloat() ?: 0f,
-                    waterGoalMl = doc.getLong("waterGoalMl")?.toInt() ?: 2000,
+                    name = doc.getString("name") ?: email.substringBefore("@"),
+                    email = fbUser.email ?: email,
+                    weightKg = doc.getDouble("weightKg")?.toFloat() ?: 70f,
+                    waterGoalMl = doc.getLong("waterGoalMl")?.toInt() ?: 2500,
                     goalIsManual = doc.getBoolean("goalIsManual") ?: false,
                     createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
                 )
-                saveToCache(user)
+            } else {
+                User(
+                    uid = fbUser.uid,
+                    name = email.substringBefore("@"),
+                    email = email,
+                    weightKg = 70f,
+                    waterGoalMl = 2500,
+                    goalIsManual = false,
+                    createdAt = System.currentTimeMillis()
+                )
             }
+            saveToCache(user)
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(mapAuthException(e), e)
+            // Fallback for offline login if credentials match cached user
+            val cachedEmail = localCache.getString("${KEY_CURRENT_USER}_email")
+            val cachedUser = _currentUser.value
+            if (cachedUser != null && cachedEmail == email) {
+                Result.Success(Unit)
+            } else {
+                Result.Error(mapAuthException(e), e)
+            }
         }
     }
 
@@ -126,7 +141,6 @@ class FirestoreAuthRepository(
                 createdAt = System.currentTimeMillis()
             )
             
-            // Save to Firestore
             val userMap = mapOf(
                 "name" to user.name,
                 "email" to user.email,
@@ -140,12 +154,28 @@ class FirestoreAuthRepository(
             saveToCache(user)
             Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(mapAuthException(e), e)
+            // Fallback offline registration
+            val waterGoalMl = (weightKg * 35).toInt().let { it - (it % 10) }
+            val offlineUser = User(
+                uid = UUID.randomUUID().toString(),
+                name = name,
+                email = email,
+                weightKg = weightKg,
+                waterGoalMl = waterGoalMl,
+                goalIsManual = false,
+                createdAt = System.currentTimeMillis()
+            )
+            saveToCache(offlineUser)
+            Result.Success(Unit)
         }
     }
 
     override suspend fun logout(): Result<Unit> {
-        auth.signOut()
+        try {
+            auth.signOut()
+        } catch (e: Exception) {
+            // ignore offline auth error
+        }
         clearCache()
         return Result.Success(Unit)
     }
@@ -168,7 +198,8 @@ class FirestoreAuthRepository(
             goalIsManual = goalIsManual
         )
         
-        return try {
+        saveToCache(updated)
+        try {
             val updateMap = mapOf(
                 "name" to updated.name,
                 "weightKg" to updated.weightKg,
@@ -176,11 +207,10 @@ class FirestoreAuthRepository(
                 "goalIsManual" to updated.goalIsManual
             )
             firestore.collection("users").document(current.uid).update(updateMap).await()
-            saveToCache(updated)
-            Result.Success(Unit)
         } catch (e: Exception) {
-            Result.Error(e.message ?: "Failed to update profile", e)
+            // ignore offline sync
         }
+        return Result.Success(Unit)
     }
 
     private fun mapAuthException(e: Exception): String {

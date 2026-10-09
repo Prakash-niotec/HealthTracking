@@ -1,6 +1,6 @@
 package com.healthtrack.app.notifications
 
-
+import android.R
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -27,7 +27,6 @@ class MedicationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action: Taken
         val takenIntent = Intent(context, MedicationActionReceiver::class.java).apply {
             action = "ACTION_TAKEN"
             putExtra("MED_ID", medId)
@@ -40,7 +39,6 @@ class MedicationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action: Skipped
         val skippedIntent = Intent(context, MedicationActionReceiver::class.java).apply {
             action = "ACTION_SKIPPED"
             putExtra("MED_ID", medId)
@@ -53,7 +51,6 @@ class MedicationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action: Snooze
         val snoozeIntent = Intent(context, MedicationActionReceiver::class.java).apply {
             action = "ACTION_SNOOZE"
             putExtra("MED_ID", medId)
@@ -68,10 +65,12 @@ class MedicationReceiver : BroadcastReceiver() {
         )
 
         val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID_MEDICATION)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Placeholder
+            .setSmallIcon(R.drawable.ic_dialog_info)
             .setContentTitle("Time for your medication")
             .setContentText("It is time to take $medName.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .addAction(0, "Taken", takenPendingIntent)
@@ -80,5 +79,6 @@ class MedicationReceiver : BroadcastReceiver() {
             .build()
 
         notificationManager.notify(medId.hashCode(), notification)
+        NotificationHelper.recordNotification(context, "Time for medication", "It is time to take $medName.", "Medication Reminder")
     }
 }
