@@ -22,7 +22,7 @@ import com.healthtrack.app.di.DefaultAppContainer
 fun HealthTrackApp() {
     val navController = rememberNavController()
     val useFirebase = false; val app = LocalContext.current.applicationContext as? HealthTrackApplication
-    val container = app?.container ?: DefaultAppContainer(LocalContext.current)
+    val container = app!!.container
     
     val viewModel: HealthViewModel = viewModel(factory = ViewModelFactory(container))
 

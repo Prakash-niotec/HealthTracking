@@ -5,8 +5,8 @@ import androidx.compose.ui.graphics.Color
 // HealthNexa Custom Brand Palette
 val HealthTealPrimaryLight = Color(0xFF006A60)
 val HealthTealSecondaryLight = Color(0xFF00897B)
-val HealthBackgroundLight = Color(0xFFF8F9FE)
-val HealthSurfaceLight = Color(0xFFFFFFFF)
+val HealthBackgroundLight = Color(0xFFFFFFFF)
+val HealthSurfaceLight = Color(0xFFF0F4F4)
 
 val HealthTealPrimaryDark = Color(0xFF50DBC8)
 val HealthTealSecondaryDark = Color(0xFF80D5C9)

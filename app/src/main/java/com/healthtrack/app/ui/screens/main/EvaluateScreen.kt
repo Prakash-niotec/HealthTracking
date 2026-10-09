@@ -91,7 +91,7 @@ fun EvaluateScreen(
 
                 Column {
                     Text(
-                        text = "AI Ingredient Safety Scanner",
+                        text = "Rule-based Ingredient Safety Scanner",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onBackground
                     )
