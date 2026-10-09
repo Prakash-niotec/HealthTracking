@@ -1,0 +1,62 @@
+Initialized native services in: /home/pk/.gradle/native
+Initialized jansi services in: /home/pk/.gradle/native
+Removing 0 daemon stop events from registry
+Previous Daemon (4387) stopped at Fri Oct 09 00:38:31 IST 2026 stop command received
+Previous Daemon (3068) stopped at Fri Oct 09 00:36:32 IST 2026 after being idle for 68 minutes and not recently used and to reclaim system physical memory
+Starting a Gradle Daemon, 2 stopped Daemons could not be reused, use --status for details
+Received JVM installation metadata from '/opt/android-studio/jbr': {JAVA_HOME=/opt/android-studio/jbr, JAVA_VERSION=25.0.3, JAVA_VENDOR=JetBrains s.r.o., RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=25.0.3+-15898627-b508.16, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=25.0.3+-15898627-b508.16, VM_VENDOR=JetBrains s.r.o., OS_ARCH=amd64}
+Starting process 'Gradle build daemon'. Working directory: /home/pk/.gradle/daemon/9.6.0 Command: /opt/android-studio/jbr/bin/java --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED --enable-native-access=ALL-UNNAMED -XX:MaxMetaspaceSize=512m -Xmx2048m -Dfile.encoding=UTF-8 -Duser.country=GB -Duser.language=en -Duser.variant -cp /home/pk/.gradle/wrapper/dists/gradle-9.6.0-bin/42k10rwplmzkhuboz9kdazi7s/gradle-9.6.0/lib/gradle-daemon-main-9.6.0.jar -javaagent:/home/pk/.gradle/wrapper/dists/gradle-9.6.0-bin/42k10rwplmzkhuboz9kdazi7s/gradle-9.6.0/lib/agents/gradle-instrumentation-agent-9.6.0.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 9.6.0
+Successfully started process 'Gradle build daemon'
+An attempt to start the daemon took 1.822 secs.
+The client will now receive all logging from the daemon (pid: 7387). The daemon log file: /home/pk/.gradle/daemon/9.6.0/daemon-7387.out.log
+Starting build in new daemon [memory: 2 GiB]
+Using 2 worker leases.
+Operational build model parameters: {cachingModelBuilding=false, configurationCache=false, configurationCacheDisabledReason=null, configurationCacheParallelLoad=false, configurationCacheParallelStore=false, configureOnDemand=false, invalidateCoupledProjects=false, isolatedProjects=false, isolatedProjectsDiagnostics=false, modelAsProjectDependency=false, modelBuilding=false, parallelModelBuilding=false, parallelProjectConfiguration=false, parallelProjectExecution=false, resilientModelBuilding=false, vintage=true}
+Received JVM installation metadata from '/opt/android-studio/jbr': {JAVA_HOME=/opt/android-studio/jbr, JAVA_VERSION=25.0.3, JAVA_VENDOR=JetBrains s.r.o., RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=25.0.3+-15898627-b508.16, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=25.0.3+-15898627-b508.16, VM_VENDOR=JetBrains s.r.o., OS_ARCH=amd64}
+Watching the file system is configured to be enabled if available
+Now considering [/home/pk/mobileApp/HealthTrack] as hierarchies to watch
+File system watching is active
+Starting Build
+Resolved plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '1.0.0']
+Settings evaluated using settings file '/home/pk/mobileApp/HealthTrack/settings.gradle.kts'.
+Using local directory build cache for the root build (location = /home/pk/.gradle/caches/build-cache-1, remove unused entries = after 7 days).
+Projects loaded. Root project using build file '/home/pk/mobileApp/HealthTrack/build.gradle.kts'.
+Included projects: [root project 'HealthTrack', project ':app']
+
+> Configure project :
+Evaluating root project 'HealthTrack' using build file '/home/pk/mobileApp/HealthTrack/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '8.3.2', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.22', apply: false]
+
+> Configure project :app
+Evaluating project ':app' using build file '/home/pk/mobileApp/HealthTrack/app/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '8.3.2']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.22']
+
+[Incubating] Problems report is available at: file:///home/pk/mobileApp/HealthTrack/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file '/home/pk/mobileApp/HealthTrack/app/build.gradle.kts' line: 1
+
+* What went wrong:
+An exception occurred applying plugin request [id: 'com.android.application', version: '8.3.2']
+> Failed to apply plugin 'com.android.internal.application'.
+   > Failed to create service 'com.android.build.gradle.internal.services.AndroidLocationsBuildService_dbd4c2c4-5367-499b-95dc-9af20b1f63d9'.
+      > Could not create an instance of type com.android.build.gradle.internal.services.AndroidLocationsBuildService.
+         > Could not create provider for value source AndroidLocationsBuildService.AndroidDirectoryCreator.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 12s
