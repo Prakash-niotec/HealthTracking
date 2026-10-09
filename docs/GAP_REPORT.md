@@ -1,29 +1,44 @@
-# Gap Report & Audit
+# Full Gap Audit & Code Verification Report
 
-Based on the required "Flexibility and Logic Fix" guidelines, here are the identified gaps between the current implementation and the requested behavior.
+This report re-verifies every previous requirement against the real production code flow (`UI -> ViewModel -> Repository -> LocalCache/Firestore -> Flow -> UI`) and logs all remaining/new gaps.
 
-## Global
-- **G1 (Single Source of Truth):** Most screens read from `HealthViewModel` StateFlows correctly, but the dashboard UI doesn't fully react to underlying edits yet (needs ViewModel to react dynamically to changes).
-- **G2 (Editable Settings):** Need to ensure every setting (including intervals, windows) triggers `AlarmScheduler.cancelAllAlarms()` and reschedules.
-- **G3 (Backward Compatibility):** New fields added to `WaterLog`, `Medication`, and `NotificationSettings` need fallback defaults for Gson parsing so existing records don't crash.
-- **G4 (Immutable History):** Edits to Medication dosage/name must not overwrite past `DoseLog` entries (already mostly handled, as `DoseLog` takes a snapshot of `medName`, but needs confirmation for dosage). Daily water goal needs a per-day snapshot.
+## Re-Verification of Earlier Claims
 
-## Water
-- **W1 (Goal Rules):** `WaterCalculator` calculates auto goals but does not enforce the strict 500-10000ml validation bounds.
-- **W2 (Goal Snapshot):** The app currently uses the live `userProfile.dailyWaterTarget` for history and streaks. A mechanism to store the per-day goal snapshot (e.g., `DailyWaterGoal` entity or embedding it in the day's record) is missing.
-- **W3 (Drink Types & Factors):** `WaterLog` currently only stores `amountMl`. Missing `drinkType` and `effectiveMl`. `NotificationSettings` is missing a map of hydration factors.
-- **W4 (CRUD on logs):** `WaterRepository` only has `undoLastLog`. Missing `deleteLog(id)` and `updateLog(log)`.
-- **W5 (Backdating):** `addHydrationLog` hardcodes `System.currentTimeMillis()`. It needs to accept a custom past timestamp and reject future timestamps.
-- **W6 (Reminder Settings):** Interval is currently fixed to specific presets in the UI/model. Needs to support 15-480 validation. Active window logic needs to correctly handle midnight crossing (e.g. 22:00 to 06:00).
-- **W7 (Smart Scheduling):** `AlarmSchedulerImpl.scheduleWaterAlarms` currently just adds `intervalMs` from `now`. It must find the *last drink time*, add the interval, constrain it inside the active window, and suppress it if the daily target is met.
-- **W8 (Notification Action):** `WaterReceiver` is missing the "Add 250 ml" PendingIntent action.
+1. **G1 (Single Source of Truth):** 
+   - *Status:* BROKEN.
+   - *Audit:* While `HealthViewModel` holds StateFlows for user profile, water, and medications, `AppContainer` had a fallback default `useFirebase = true` without initializing `FirebaseApp` in tests. More critically, screen actions in `HealthTrackApp` were callingViewModel functions that did not update all dependent screens simultaneously (e.g. daily water goal updates on Profile did not immediately update the streak or water target snapshot for past dates).
 
-## Medication
-- **M1 (Editing):** Needs full edit capability without altering past logs.
-- **M2 (Pause/Resume):** `Medication` has `isActive`, but we need to ensure the UI can toggle it and that toggling it triggers an alarm reschedule.
-- **M3 (Configurable Windows):** `AdherenceCalculator` hardcodes `ON_TIME_WINDOW_MINUTES` and `MISSED_THRESHOLD_MINUTES`. Snooze duration is missing entirely. These must become user settings in `NotificationSettings`.
-- **M4 & M5 (Status updates):** User needs the ability to mark past missed doses as taken.
-- **M6 (Empty states):** Must show "No doses today".
+2. **G2 (Editable & Persisted Settings):**
+   - *Status:* BROKEN.
+   - *Audit:* `NotificationSettings` was defined, but there was no UI screen or dialog allowing the user to edit reminder intervals, active windows, or snooze durations. Alarms were not rescheduled when settings were changed in memory.
 
-## Stats & Dashboard
-- **S1 & S2 (Reactivity & Snapshot Streaks):** `StreakCalculator` must be updated to consume the daily goal snapshots rather than the current live goal.
+3. **G3 & G4 (Backward Compatibility & Immutable History):**
+   - *Status:* BROKEN.
+   - *Audit:* `DoseLog` lacked a snapshot of medication dosage (`medDosage`). Water logs lacked snapshot of the daily goal in effect for that date (`DailyWaterGoal`).
+
+4. **W1 - W8 (Water System):**
+   - *Status:* BROKEN / MISSING.
+   - *Audit:*
+     - W1: Manual goal 500-10000ml validation was not enforced in UI inputs.
+     - W2: No per-day goal snapshot stored in water logs/daily records.
+     - W3: Drink types (Water, Milk, Tea, Coffee, Juice, Other) and per-type hydration factors were missing from UI quick-add.
+     - W4: Timeline list only allowed deleting via `undoLastLog`. Editing an entry or deleting middle entries was unsupported.
+     - W5: Backdating was missing from the UI.
+     - W6 & W7: Reminder settings were not accessible from the UI. `WaterReminderCalculator` existed in domain code but was not wired to a visible UI bell control or next-reminder status text on the Hydration screen.
+     - W8: "Add 250 ml" action in `WaterReceiver` existed in code but notification channel icon/action handling needed verification.
+
+5. **M1 - M6 (Medication System):**
+   - *Status:* CRITICAL BUG / BROKEN.
+   - *Audit:*
+     - L1 Critical Bug: `HealthViewModel.addMedication` hardcoded `times = listOf("08:00")`. Regardless of what time the user selected in `AddMedicationScreen` (e.g. 16:30), the saved medication always defaulted to `08:00`.
+     - L2 Critical Bug: `MedsScreen` filtered all `!it.isTaken` medications as "Upcoming Doses", ignoring the clock. Past doses appeared as "Upcoming" instead of "Missed/Due".
+     - Action buttons on dose cards were rendered as solid unreadable dark green rectangles without clear labels.
+     - Pause/Resume, Edit, and Delete confirmations were missing from the dose card action bar.
+
+6. **L3 (Health Rule Engine & Ingredients):**
+   - *Status:* MISSING / INCOMPLETE.
+   - *Audit:* `assets/ingredients.json` did not exist. Autocomplete dropdown, synonym resolution, unit dropdown filtering (g, mg, mcg, kcal), and "food vs nutrient" detection were missing from `EvaluateScreen`. Quick select chips were hardcoded and included "Caffeine" which lacked defined rules.
+
+7. **UI Defects (U1 - U12):**
+   - *Status:* BROKEN.
+   - *Audit:* Cards had inner background rectangle mismatches (U1). Evaluate card text was truncated (U2). Dose action buttons were solid dark green bars (U3). Bottom nav "Medications" label wrapped awkwardly to "Medicatio / ns" (U4). Avatar top flat clipping (U5). Unclear static "Safe" badge (U6). False HIPAA claims (U7). Quick-add +250ml button permanently selected (U8). Adherence card names truncated to "Amoxi"/"Atorv" (U9). System status bar flat grey (U11).

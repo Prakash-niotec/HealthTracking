@@ -1,0 +1,122 @@
+[
+  {
+    "canonicalNutrient": "sodium",
+    "displayName": "Sodium",
+    "aliases": ["sodium", "salt", "table salt", "sodium chloride", "nacl", "na", "sodium content", "salt equivalent", "uppu"],
+    "unitFamily": "weight",
+    "supportedUnits": ["mg", "g"],
+    "conversionFactorToMg": 1.0,
+    "compoundConversions": [
+      {
+        "compoundName": "salt (sodium chloride)",
+        "factorToSodiumMg": 393.4
+      },
+      {
+        "compoundName": "sodium bicarbonate (baking soda)",
+        "factorToSodiumMg": 273.7
+      }
+    ]
+  },
+  {
+    "canonicalNutrient": "sugar",
+    "displayName": "Sugar",
+    "aliases": ["sugar", "sucrose", "added sugar", "added sugars", "total sugars", "glucose", "fructose", "table sugar", "sugars", "hfcs", "high fructose corn syrup", "corn syrup"],
+    "unitFamily": "weight",
+    "supportedUnits": ["g", "mg"],
+    "conversionFactorToMg": 1000.0
+  },
+  {
+    "canonicalNutrient": "saturated fat",
+    "displayName": "Saturated Fat",
+    "aliases": ["saturated fat", "sat fat", "saturates", "saturated fatty acids", "saturated fats"],
+    "unitFamily": "weight",
+    "supportedUnits": ["g", "mg"],
+    "conversionFactorToMg": 1000.0
+  },
+  {
+    "canonicalNutrient": "trans fat",
+    "displayName": "Trans Fat",
+    "aliases": ["trans fat", "trans fatty acids", "trans fats", "partially hydrogenated oil", "hydrogenated fat"],
+    "unitFamily": "weight",
+    "supportedUnits": ["g", "mg"],
+    "conversionFactorToMg": 1000.0
+  },
+  {
+    "canonicalNutrient": "carbohydrate",
+    "displayName": "Carbohydrates",
+    "aliases": ["carbohydrate", "carbs", "total carbohydrate", "carbohydrates", "total carbs"],
+    "unitFamily": "weight",
+    "supportedUnits": ["g", "mg"],
+    "conversionFactorToMg": 1000.0
+  },
+  {
+    "canonicalNutrient": "calories",
+    "displayName": "Calories",
+    "aliases": ["calories", "energy", "kcal", "cal", "kilocalories"],
+    "unitFamily": "energy",
+    "supportedUnits": ["kcal"],
+    "conversionFactorToMg": 1.0
+  },
+  {
+    "canonicalNutrient": "cholesterol",
+    "displayName": "Cholesterol",
+    "aliases": ["cholesterol", "dietary cholesterol"],
+    "unitFamily": "weight",
+    "supportedUnits": ["mg", "g"],
+    "conversionFactorToMg": 1.0
+  },
+  {
+    "canonicalNutrient": "potassium",
+    "displayName": "Potassium",
+    "aliases": ["potassium", "k", "potassium chloride"],
+    "unitFamily": "weight",
+    "supportedUnits": ["mg", "g"],
+    "conversionFactorToMg": 1.0,
+    "compoundConversions": [
+      {
+        "compoundName": "potassium chloride",
+        "factorToSodiumMg": 524.5
+      }
+    ]
+  },
+  {
+    "canonicalNutrient": "phosphorus",
+    "displayName": "Phosphorus",
+    "aliases": ["phosphorus", "phosphate", "phosphates", "phosphoric acid", "p"],
+    "unitFamily": "weight",
+    "supportedUnits": ["mg", "g"],
+    "conversionFactorToMg": 1.0
+  },
+  {
+    "canonicalNutrient": "total fat",
+    "displayName": "Total Fat",
+    "aliases": ["total fat", "fat", "fats", "lipids"],
+    "unitFamily": "weight",
+    "supportedUnits": ["g", "mg"],
+    "conversionFactorToMg": 1000.0
+  },
+  {
+    "canonicalNutrient": "caffeine",
+    "displayName": "Caffeine",
+    "aliases": ["caffeine"],
+    "unitFamily": "weight",
+    "supportedUnits": ["mg"],
+    "conversionFactorToMg": 1.0
+  },
+  {
+    "canonicalNutrient": "protein",
+    "displayName": "Protein",
+    "aliases": ["protein", "proteins"],
+    "unitFamily": "weight",
+    "supportedUnits": ["g", "mg"],
+    "conversionFactorToMg": 1000.0
+  },
+  {
+    "canonicalNutrient": "fibre",
+    "displayName": "Fiber / Fibre",
+    "aliases": ["fibre", "fiber", "dietary fiber", "dietary fibre"],
+    "unitFamily": "weight",
+    "supportedUnits": ["g", "mg"],
+    "conversionFactorToMg": 1000.0
+  }
+]

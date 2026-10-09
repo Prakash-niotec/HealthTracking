@@ -39,40 +39,71 @@ class HealthRuleEngine(private val rules: List<HealthRule> = StarterRules.defaul
             return EvaluationOutcome.ValidationError("Value must be greater than 0")
         }
 
-        val normalizedInputName = ingredientName.trim().lowercase(Locale.ROOT)
-        val normalizedCondition = normalizeCondition(condition)
-        val normalizedUnit = unit.trim().lowercase(Locale.ROOT)
+        val match = IngredientCatalogue.match(ingredientName, value, unit)
 
-        // Find rules matching the condition
+        val targetNutrientName: String
+        val customPrefix: String?
+        var effectiveValue = value
+        var effectiveUnit = unit
+
+        when (match) {
+            is MatchResult.FoodDetected -> {
+                return EvaluationOutcome.ValidationError("This looks like a food (${match.foodName}). Please enter a specific nutrient (e.g. sodium, sugar, potassium) per serving.")
+            }
+            is MatchResult.Suggestions -> {
+                val sugStr = match.suggestions.joinToString(", ")
+                return EvaluationOutcome.ValidationError("Ingredient '$ingredientName' not recognized. Did you mean: $sugStr?")
+            }
+            is MatchResult.Exact -> {
+                targetNutrientName = match.convertedNutrient
+                customPrefix = match.customExplanation
+                if (match.convertedAmountMg != null) {
+                    effectiveValue = match.convertedAmountMg
+                    effectiveUnit = "mg"
+                }
+            }
+            is MatchResult.NotFound -> {
+                targetNutrientName = ingredientName.trim().lowercase(Locale.ROOT)
+                customPrefix = null
+            }
+        }
+
+        val normalizedCondition = normalizeCondition(condition)
+        val normalizedUnit = effectiveUnit.trim().lowercase(Locale.ROOT)
+
+        // Find rules matching condition
         val conditionRules = rules.filter { normalizeCondition(it.condition) == normalizedCondition }
-        
-        // Find specific rule matching the nutrient or aliases
+
+        // Find rule matching target nutrient or aliases
         val rule = conditionRules.find { r ->
-            r.nutrient.lowercase(Locale.ROOT) == normalizedInputName ||
-            r.aliases.any { it.lowercase(Locale.ROOT) == normalizedInputName }
+            r.nutrient.lowercase(Locale.ROOT) == targetNutrientName ||
+            r.aliases.any { it.lowercase(Locale.ROOT) == targetNutrientName }
         }
 
         if (rule == null) {
-            return EvaluationOutcome.NoRuleFound("No rule defined for this nutrient and condition")
+            return EvaluationOutcome.NoRuleFound("No rule defined for '$ingredientName' under $condition.")
         }
 
-        // Normalize unit
-        val normalizedValueResult = normalizeUnit(value, normalizedUnit, rule.baseUnit.lowercase(Locale.ROOT))
-        if (normalizedValueResult == null) {
-            return EvaluationOutcome.ValidationError("Incompatible unit: cannot convert $unit to ${rule.baseUnit}")
-        }
+        val normalizedValueResult = normalizeUnit(effectiveValue, normalizedUnit, rule.baseUnit.lowercase(Locale.ROOT))
+            ?: return EvaluationOutcome.ValidationError("Incompatible unit: cannot convert $unit to ${rule.baseUnit}")
 
         val isSafe = normalizedValueResult <= rule.threshold
         val result = if (isSafe) EvaluationResult.SAFE else EvaluationResult.UNSAFE
 
-        val explanation = rule.explanationTemplate
+        val baseExplanation = rule.explanationTemplate
             .replace("{ingredient}", ingredientName)
             .replace("{value}", "$normalizedValueResult ${rule.baseUnit}")
             .replace("{threshold}", "${rule.threshold} ${rule.baseUnit}")
 
+        val finalExplanation = if (customPrefix != null) {
+            "$customPrefix\n\n$baseExplanation"
+        } else {
+            baseExplanation
+        }
+
         return EvaluationOutcome.Evaluated(
             result = result,
-            explanation = explanation,
+            explanation = finalExplanation,
             matchedRule = rule,
             normalizedValue = normalizedValueResult
         )
@@ -94,7 +125,6 @@ class HealthRuleEngine(private val rules: List<HealthRule> = StarterRules.defaul
     private fun normalizeUnit(value: Double, fromUnit: String, toUnit: String): Double? {
         if (fromUnit == toUnit) return value
 
-        // g, mg, mcg conversions
         return when (fromUnit) {
             "g" -> when (toUnit) {
                 "mg" -> value * 1000.0
@@ -111,7 +141,6 @@ class HealthRuleEngine(private val rules: List<HealthRule> = StarterRules.defaul
                 "mg" -> value / 1000.0
                 else -> null
             }
-            // kcal is not compatible with weight units
             else -> null
         }
     }
