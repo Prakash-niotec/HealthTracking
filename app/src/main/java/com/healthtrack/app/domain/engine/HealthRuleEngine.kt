@@ -40,11 +40,11 @@ class HealthRuleEngine(private val rules: List<HealthRule> = StarterRules.defaul
         }
 
         val normalizedInputName = ingredientName.trim().lowercase(Locale.ROOT)
-        val normalizedCondition = condition.trim().lowercase(Locale.ROOT)
+        val normalizedCondition = normalizeCondition(condition)
         val normalizedUnit = unit.trim().lowercase(Locale.ROOT)
 
         // Find rules matching the condition
-        val conditionRules = rules.filter { it.condition.lowercase(Locale.ROOT) == normalizedCondition }
+        val conditionRules = rules.filter { normalizeCondition(it.condition) == normalizedCondition }
         
         // Find specific rule matching the nutrient or aliases
         val rule = conditionRules.find { r ->
@@ -76,6 +76,19 @@ class HealthRuleEngine(private val rules: List<HealthRule> = StarterRules.defaul
             matchedRule = rule,
             normalizedValue = normalizedValueResult
         )
+    }
+
+    private fun normalizeCondition(cond: String): String {
+        val lower = cond.trim().lowercase(Locale.ROOT)
+        return when {
+            lower.contains("diabetes") -> "diabetes"
+            lower.contains("hypertension") || lower.contains("high blood pressure") -> "hypertension"
+            lower.contains("cholesterol") -> "high cholesterol"
+            lower.contains("kidney") -> "kidney disease"
+            lower.contains("heart") -> "heart disease"
+            lower.contains("obesity") -> "obesity"
+            else -> lower
+        }
     }
 
     private fun normalizeUnit(value: Double, fromUnit: String, toUnit: String): Double? {

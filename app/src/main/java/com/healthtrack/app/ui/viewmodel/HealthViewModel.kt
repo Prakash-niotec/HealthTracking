@@ -37,6 +37,9 @@ class HealthViewModel(
     private val _currentMainTab = MutableStateFlow(MainTab.HOME)
     val currentMainTab: StateFlow<MainTab> = _currentMainTab.asStateFlow()
 
+    private val _lastEvaluation = MutableStateFlow<Screen.EvaluationResult?>(null)
+    val lastEvaluation: StateFlow<Screen.EvaluationResult?> = _lastEvaluation.asStateFlow()
+
     val userProfile: StateFlow<UserProfile?> = authRepository.currentUser
         .map { it?.toUserProfile() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -49,7 +52,7 @@ class HealthViewModel(
     private val currentDateKey = LocalDate.now().toString()
 
     val hydrationLogs: StateFlow<List<HydrationLog>> = waterRepository.getLogsForDate(currentDateKey)
-        .map { logs -> logs.map { HydrationLog(id = it.id, amountMl = it.amountMl, label = "Water", timestamp = it.timestamp) } }
+        .map { logs -> logs.map { HydrationLog(id = it.id, amountMl = it.amountMl, label = it.drinkType, timestamp = it.timestamp) } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // Convert core Medications into UI MedicationItems
@@ -171,7 +174,6 @@ class HealthViewModel(
     }
 
     fun addMedication(item: MedicationItem) {
-        // Simplified mapping back to core Medication
         viewModelScope.launch {
             val med = Medication(
                 id = item.id,
@@ -185,7 +187,6 @@ class HealthViewModel(
                 isActive = true
             )
             medicationRepository.addMedication(med)
-            popBackStack()
         }
     }
 
@@ -207,12 +208,12 @@ class HealthViewModel(
                 }
                 medicationRepository.markDose(log.copy(status = newStatus, actedAt = System.currentTimeMillis()))
             } else {
-                // If not found, maybe generate one dynamically (edge case if scheduler hasn't populated it yet)
                 val med = medicationRepository.getMedications().first().find { it.id == id } ?: return@launch
                 val newLog = DoseLog(
                     id = "${id}_${System.currentTimeMillis()}",
                     medId = id,
                     medName = med.name,
+                    medDosage = med.dosage,
                     scheduledAt = System.currentTimeMillis(),
                     status = DoseStatus.TAKEN,
                     actedAt = System.currentTimeMillis()
@@ -222,14 +223,14 @@ class HealthViewModel(
         }
     }
 
-    fun evaluateIngredient(name: String, amount: Double, unit: String, condition: String) {
+    fun evaluateIngredient(name: String, amount: Double, unit: String, condition: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             val engine = HealthRuleEngine(StarterRules.defaultRules)
             val outcome = engine.evaluate(name, amount, unit, condition)
 
-            if (outcome is EvaluationOutcome.Evaluated) {
-                navigateTo(
-                    Screen.EvaluationResult(
+            when (outcome) {
+                is EvaluationOutcome.Evaluated -> {
+                    _lastEvaluation.value = Screen.EvaluationResult(
                         ingredientName = name,
                         amount = amount,
                         unit = unit,
@@ -237,9 +238,30 @@ class HealthViewModel(
                         riskLevel = outcome.result.name,
                         recommendation = outcome.explanation
                     )
-                )
-            } else if (outcome is EvaluationOutcome.ValidationError) {
-                // error handling
+                    onSuccess()
+                }
+                is EvaluationOutcome.NoRuleFound -> {
+                    _lastEvaluation.value = Screen.EvaluationResult(
+                        ingredientName = name,
+                        amount = amount,
+                        unit = unit,
+                        condition = condition,
+                        riskLevel = "MODERATE",
+                        recommendation = outcome.message
+                    )
+                    onSuccess()
+                }
+                is EvaluationOutcome.ValidationError -> {
+                    _lastEvaluation.value = Screen.EvaluationResult(
+                        ingredientName = name,
+                        amount = amount,
+                        unit = unit,
+                        condition = condition,
+                        riskLevel = "HIGH",
+                        recommendation = outcome.message
+                    )
+                    onSuccess()
+                }
             }
         }
     }
